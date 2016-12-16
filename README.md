@@ -1,0 +1,3 @@
+# django-timberjack
+
+Some kind of logging system...
