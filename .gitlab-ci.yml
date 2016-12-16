@@ -22,6 +22,3 @@ test:py35:
     paths:
       - $PIP_DOWNLOAD_CACHE
   script: tox -e py35-django1.8,py35-django1.9,py35-django1.10
-
-
-
