@@ -1,0 +1,27 @@
+before_script:
+  - mkdir -p $PIP_DOWNLOAD_CACHE
+  - pip install tox
+
+variables:
+  PIP_DOWNLOAD_CACHE: /tmp/pip_download_cache
+
+test:py34:
+  script: tox -e py34-django1.8,py34-django1.9,py34-django1.10
+  cache:
+    paths:
+      - $PIP_DOWNLOAD_CACHE
+  image: python:3.4
+  services:
+    - mongo:latest
+
+test:py35:
+  script: tox -e py35-django1.8,py35-django1.9,py35-django1.10
+  cache:
+    paths:
+      - $PIP_DOWNLOAD_CACHE
+  image: python:3.4
+  services:
+    - mongo:latest
+
+
+
