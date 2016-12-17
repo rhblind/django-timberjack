@@ -5,7 +5,7 @@ from __future__ import absolute_import, unicode_literals
 from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase, override_settings
 
-from timberjack.loading import ConnectionHandler
+from timberjack.loading import ConnectionHandler, ConnectionWrapper
 
 
 class ConnectionHandlerTestCase(TestCase):
@@ -87,6 +87,20 @@ class ConnectionHandlerTestCase(TestCase):
         # Make sure we get a new object when reloaded
         self.assertNotEqual(handler['default'], handler.reload('default'))
 
+    def test_reload_all_yield_connection(self):
+        handler = ConnectionHandler({
+            'default': {
+                'NAME': 'default',
+                'HOST': 'localhost'
+            },
+            'other': {
+                'NAME': 'other',
+                'HOST': 'localhost'
+            }
+        })
+        for obj in handler.reload_all():
+            self.assertTrue(obj.using in handler.connections_info)
+
     def test_reload_invalid_alias(self):
         handler = ConnectionHandler({
             'default': {
@@ -101,3 +115,38 @@ class ConnectionHandlerTestCase(TestCase):
             self.assertEqual(str(e), 'The key "slave" isn\'t an available connection.')
         else:
             self.fail('Should fail with ImproperlyConfigured when reloading an invalid alias.')
+
+
+@override_settings(MONGO_CONNECTIONS={
+    'default': {
+        'NAME': 'default',
+        'HOST': 'localhost',
+    }
+})
+class ConnectionWrapperTestCase(TestCase):
+
+    def test_is_connected_by_default(self):
+        wrapper = ConnectionWrapper(using='default')
+        self.assertTrue(wrapper.is_connected)
+
+    def test_reset_connection(self):
+        wrapper = ConnectionWrapper(using='default')
+        wrapper.reset_connection()
+        self.assertFalse(wrapper.is_connected)
+
+    def test_connect(self):
+        wrapper = ConnectionWrapper(using='default')
+        wrapper.reset_connection()
+        self.assertFalse(wrapper.is_connected)
+
+        wrapper.connect()
+        self.assertTrue(wrapper.is_connected)
+
+    def test_automatic_reconnect_when_reading_property(self):
+        wrapper = ConnectionWrapper(using='default')
+
+        wrapper.reset_connection()
+        self.assertFalse(wrapper.is_connected)
+
+        wrapper.connection
+        self.assertTrue(wrapper.is_connected)
