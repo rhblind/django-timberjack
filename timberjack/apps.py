@@ -5,7 +5,7 @@ from django.apps import AppConfig
 from . import connections
 
 
-class TimberJackConfig(AppConfig):
+class TimberJackConfig(AppConfig):  # pragma: no cover
     name = 'timberjack'
     label = 'timberjack'
 
