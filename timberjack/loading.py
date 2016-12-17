@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
 from mongoengine import connect
-from mongoengine.connection import disconnect
+from mongoengine.connection import _connections, disconnect
 
 from .constants import DEFAULT_ALIAS
 
@@ -62,22 +62,27 @@ class ConnectionWrapper(object):
         self._connection = None
 
         # Make an initial connection
-        self.connect(self.using)
+        self.connect()
+
+    @property
+    def is_connected(self):
+        return self._connection is not None and self.using in _connections
 
     @property
     def connection(self):
         if self._connection is None:
-            self._connection = self.connect(self.using)
+            self._connection = self.connect()
         return self._connection
 
-    def connect(self, alias):
-        return connect(alias=alias,
-                       tz_aware=settings.USE_TZ,
-                       db=self.options.get('NAME', None),
-                       host=self.options.get('HOST', None),
-                       port=self.options.get('PORT', None),
-                       username=self.options.get('USERNAME', None),
-                       password=self.options.get('PASSWORD', None))
+    def connect(self):
+        self._connection = connect(alias=self.using,
+                                   tz_aware=settings.USE_TZ,
+                                   db=self.options.get('NAME', None),
+                                   host=self.options.get('HOST', None),
+                                   port=self.options.get('PORT', None),
+                                   username=self.options.get('USERNAME', None),
+                                   password=self.options.get('PASSWORD', None))
+        return self.connection
 
     def reset_connection(self):
         disconnect(self.using)
