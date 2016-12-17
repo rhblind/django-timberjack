@@ -51,7 +51,7 @@ class ConnectionHandler(object):
 
     def reload_all(self):
         for alias in settings.MONGO_CONNECTIONS.keys():
-            self.reload(alias)
+            yield self.reload(alias)
 
 
 class ConnectionWrapper(object):
