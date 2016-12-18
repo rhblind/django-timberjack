@@ -6,6 +6,8 @@ from django.contrib.contenttypes.models import ContentType
 
 from mongoengine.fields import StringField
 
+_ctype_cache = {}
+
 
 class ContentTypeField(StringField):
     """
@@ -19,9 +21,14 @@ class ContentTypeField(StringField):
         super(ContentTypeField, self).__init__(regex=self.regex, *args, **kwargs)
 
     def to_python(self, value):
-        # TODO: Cache lookup
-        app_label, model = value.split('.', 1)
-        return ContentType.objects.get(app_label=app_label, model=model)
+        try:
+            return _ctype_cache[value]
+        except KeyError:
+            app_label, model = value.split('.', 1)
+            value = '{app_label}.{model}'.format(app_label=app_label, model=model)
+            _ctype_cache.update({value: ContentType.objects.get(app_label=app_label, model=model)})
+        finally:
+            return _ctype_cache[value]
 
     def to_mongo(self, value):
         if isinstance(value, str):
@@ -32,9 +39,10 @@ class ContentTypeField(StringField):
     def validate(self, value):
         if isinstance(value, str):
             try:
-                # TODO: Cache lookup
                 app_label, model = self.regex.match(value).groups()
-                ContentType.objects.get(app_label=app_label, model=model)
+                value = '{app_label}.{model}'.format(app_label=app_label, model=model)
+                if value not in _ctype_cache:
+                    _ctype_cache.update({value: ContentType.objects.get(app_label=app_label, model=model)})
             except (AttributeError, ContentType.DoesNotExist):
                 self.error('Could not look up ContentType object for "%s".' % value)
 
