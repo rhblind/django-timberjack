@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from django.contrib.contenttypes.models import ContentType
+
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.validators import validate_ipv46_address
 

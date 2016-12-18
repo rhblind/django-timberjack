@@ -8,7 +8,7 @@ from mongoengine import *
 from mongoengine.queryset import QuerySet
 
 from timberjack.fields import ContentTypeField
-from timberjack.validators import validate_ip_address, validate_content_type
+from timberjack.validators import validate_ip_address
 
 # We want to log CRUD actions
 CREATE = 1
