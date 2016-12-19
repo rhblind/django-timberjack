@@ -2,13 +2,13 @@ before_script:
   - pip install tox
 
 test:py34:
-  image: python:3.4
+  image: python:3.4-alpine
   services:
     - mongo:latest
   script: tox -e py34-django1.8,py34-django1.9,py34-django1.10
 
 test:py35:
-  image: python:3.5
+  image: python:3.5-alpine
   services:
     - mongo:latest
   script: tox -e py35-django1.8,py35-django1.9,py35-django1.10
