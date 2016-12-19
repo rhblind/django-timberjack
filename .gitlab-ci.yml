@@ -1,5 +1,5 @@
 before_script:
-  - apl add git
+  - apk add git
   - pip install tox
 
 test:py34:
