@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from django.test import TestCase
+from django.db import models
+from django.contrib.auth.models import AbstractBaseUser
+from django.test import TestCase, override_settings
+
 from mongoengine import ValidationError
-from timberjack.fields import ContentType, ContentTypeField
+from timberjack.fields import ContentType, ContentTypeField, UserPKField
 
 
 class ContentTypeFieldTestCase(TestCase):
@@ -26,7 +29,7 @@ class ContentTypeFieldTestCase(TestCase):
             self.field.regex.match('auth').groups()
             self.fail('Did not fail when trying to call method on non-matched result')
         except AttributeError as e:
-            self.assertEqual(str(e), '\'NoneType\' object has no attribute \'groups\'')
+            self.assertEqual(str(e), "'NoneType' object has no attribute 'groups'")
 
     def test_validate_ctype_string(self):
         self.assertIsNone(self.field.validate('auth.user'))
@@ -63,3 +66,53 @@ class ContentTypeFieldTestCase(TestCase):
             self.field.to_mongo(ContentType.objects.get(app_label='auth', model='user')),
             'auth.user'
         )
+
+
+@override_settings(AUTH_USER_MODEL='timberjack.IntegerUserModel')
+class UserPKFieldTestCase(TestCase):
+
+    class IntegerUserModel(AbstractBaseUser):
+        username = models.CharField(max_length=255)
+        USERNAME_FIELD = 'username'
+
+        class Meta:
+            app_label = 'timberjack'
+
+    def setUp(self):
+        self.field = UserPKField()
+
+    def test_validate_integer(self):
+        self.assertIsNone(self.field.validate(1))
+
+    # def test_validate_string_fails(self):
+    #     try:
+    #         self.field.validate('this is not an integer!')
+    #         self.fail('Did not fail when trying to validate a string.')
+    #     except Exception as e:
+    #         self.fail(str(e))
+
+
+@override_settings(AUTH_USER_MODEL='timberjack.StringUserModel')
+class StringUserPKFieldTestCase(TestCase):
+
+    class StringUserModel(AbstractBaseUser):
+        id = models.CharField(primary_key=True, unique=True, max_length=255)
+        username = models.CharField(max_length=255)
+        USERNAME_FIELD = 'username'
+
+        class Meta:
+            app_label = 'timberjack'
+
+    def setUp(self):
+        self.field = UserPKField()
+
+    def test_validate_string(self):
+        self.assertIsNone(self.field.validate('unique string'))
+
+    def test_validate_non_int_fails(self):
+        try:
+            self.assertRaises(ValidationError, self.field.validate, 1)
+            self.fail('Did not fail when trying to validate a non string type.')
+        except TypeError as e:
+            self.assertEqual(str(e), "object of type 'int' has no len()")
+

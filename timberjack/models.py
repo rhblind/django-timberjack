@@ -7,7 +7,7 @@ from django.utils.translation import ugettext_lazy as _
 from mongoengine import *
 from mongoengine.queryset import QuerySet
 
-from timberjack.fields import ContentTypeField
+from timberjack.fields import ContentTypeField, UserPKField
 from timberjack.validators import validate_ip_address
 
 # We want to log CRUD actions
@@ -40,12 +40,13 @@ class ObjectAccessLog(Document):
         'queryset_class': ObjectAccessLogQuerySet
     }
 
-    action_flag = IntField(min_value=1, max_value=4, required=True)
-    ip_address = StringField(validation=validate_ip_address, required=False)
-    level = IntField(choices=LOG_LEVEL, default=0)
     message = StringField(default='')
+    action_flag = IntField(min_value=1, max_value=4, required=True)
+    level = IntField(choices=LOG_LEVEL, default=0)
     object_pk = StringField(required=True)
     content_type = ContentTypeField(required=True)
+    user_pk = UserPKField(required=False)
+    ip_address = StringField(validation=validate_ip_address, required=False)
     timestamp = DateTimeField(required=True, default=timezone.now)
 
     def __repr__(self):

@@ -1,21 +1,22 @@
 # -*- coding: utf-8 -*-
 
 import re
+import operator
+from functools import reduce
 
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 
-from mongoengine.fields import StringField
+from mongoengine import fields
 
 _ctype_cache = {}
 
 
-class ContentTypeField(StringField):
+class ContentTypeField(fields.StringField):
     """
     Store django ContentType references.
     """
     regex = re.compile(r'^(\w+)\.(\w+)')
-
-    # TODO: Cache valid ContentType lookups.
 
     def __init__(self, *args, **kwargs):
         super(ContentTypeField, self).__init__(regex=self.regex, *args, **kwargs)
@@ -51,4 +52,27 @@ class ContentTypeField(StringField):
 
         super(ContentTypeField, self).validate(value)
 
+
+class UserPKField(fields.DynamicField):
+    """
+    Dynamic field which piggybacks on the settings.AUTH_USER_MODEL
+    validation and value converting.
+    """
+
+    @property
+    def pk_field(self):
+        model = get_user_model()
+        pk_field = reduce(operator.eq,
+                          filter(lambda field: field.primary_key, model._meta.fields))
+        return pk_field
+
+    def to_python(self, value):
+        return self.pk_field.to_python(value)
+
+    def to_mongo(self, value, **kwargs):
+        return self.to_python(value)
+
+    def validate(self, value, clean=True):
+        # TODO: Raise mongoengine.ValidationError with support for list of error messages.
+        self.pk_field.run_validators(value)
 
