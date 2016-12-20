@@ -4,10 +4,12 @@ import re
 import operator
 from functools import reduce
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.utils.translation import ugettext_lazy as _
 
-from mongoengine import fields
+from mongoengine import fields, ValidationError
 
 _ctype_cache = {}
 
@@ -59,6 +61,10 @@ class UserPKField(fields.DynamicField):
     validation and value converting.
     """
 
+    default_error_messages = {
+        'non_field_error': _('Value %(value)r is not a valid primary key value for %(field)r.')
+    }
+
     @property
     def pk_field(self):
         model = get_user_model()
@@ -70,9 +76,22 @@ class UserPKField(fields.DynamicField):
         return self.pk_field.to_python(value)
 
     def to_mongo(self, value, **kwargs):
+        # NOTE: This is probably way to naive!
         return self.to_python(value)
 
     def validate(self, value, clean=True):
-        # TODO: Raise mongoengine.ValidationError with support for list of error messages.
-        self.pk_field.run_validators(value)
+        try:
+            self.pk_field.run_validators(value)
+        except DjangoValidationError as e:
+            if hasattr(e, 'code') and e.code in self.pk_field.error_messages:
+                e.message = self.pk_field.error_messages[e.code]
+            message = getattr(e, 'message', '. '.join(e.messages))
+            raise ValidationError(message)
+        except Exception:
+            # All other exceptions are recorded as 'non_field_error'.
+            message = self.default_error_messages['non_field_error'] % {
+                'value': value,
+                'field': self.pk_field
+            }
+            raise ValidationError(message)
 
