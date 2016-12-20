@@ -5,7 +5,7 @@ import threading
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
-from mongoengine import connect
+from mongoengine import connect, register_connection
 from mongoengine.connection import _connections, disconnect
 
 from .constants import DEFAULT_ALIAS
@@ -51,7 +51,7 @@ class ConnectionHandler(object):
 
     def reload_all(self):
         for alias in settings.MONGO_CONNECTIONS.keys():
-            yield self.reload(alias)
+            self.reload(alias)
 
 
 class ConnectionWrapper(object):

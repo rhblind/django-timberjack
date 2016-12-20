@@ -5,6 +5,8 @@ from __future__ import absolute_import, unicode_literals
 from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase, override_settings
 
+from mongoengine.connection import _connections, get_connection
+
 from timberjack.loading import ConnectionHandler, ConnectionWrapper
 
 
@@ -87,20 +89,6 @@ class ConnectionHandlerTestCase(TestCase):
         # Make sure we get a new object when reloaded
         self.assertNotEqual(handler['default'], handler.reload('default'))
 
-    def test_reload_all_yield_connection(self):
-        handler = ConnectionHandler({
-            'default': {
-                'NAME': 'default',
-                'HOST': 'localhost'
-            },
-            'other': {
-                'NAME': 'other',
-                'HOST': 'localhost'
-            }
-        })
-        for obj in handler.reload_all():
-            self.assertTrue(obj.using in handler.connections_info)
-
     def test_reload_invalid_alias(self):
         handler = ConnectionHandler({
             'default': {
@@ -150,3 +138,8 @@ class ConnectionWrapperTestCase(TestCase):
 
         wrapper.connection
         self.assertTrue(wrapper.is_connected)
+
+    def test_wrapper_register_connection(self):
+        wrapper = ConnectionWrapper(using='default')
+        self.assertTrue(wrapper.using in _connections)
+        self.assertEqual(get_connection(wrapper.using), wrapper.connection)
