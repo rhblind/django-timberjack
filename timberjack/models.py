@@ -10,11 +10,12 @@ from mongoengine.queryset import QuerySet
 from timberjack.fields import ContentTypeField, UserPKField
 from timberjack.validators import validate_ip_address
 
-# We want to log CRUD actions
+# We want to log CRUD actions.
+# (keep numerical values compatible with admin.LogEntry model)
 CREATE = 1
-READ = 2
-UPDATE = 3
-DELETE = 4
+UPDATE = 2
+DELETE = 3
+READ = 4
 
 LOG_LEVEL = (
     (0, _('NOTSET')),
