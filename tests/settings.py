@@ -63,7 +63,7 @@ MONGO_CONNECTIONS = {
 
 AUTH_PASSWORD_VALIDATORS = []
 PASSWORD_HASHERS = (
-    'django.contrib.auth.hashers.MD5PasswordHasher'
+    'django.contrib.auth.hashers.MD5PasswordHasher',
 )
 
 LANGUAGE_CODE = 'en-us'
@@ -73,3 +73,8 @@ USE_L10N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
+
+try:
+    from .local_settings import *
+except ImportError:
+    pass
