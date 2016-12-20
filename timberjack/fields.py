@@ -24,14 +24,22 @@ class ContentTypeField(fields.StringField):
         super(ContentTypeField, self).__init__(regex=self.regex, *args, **kwargs)
 
     def to_python(self, value):
-        try:
-            return _ctype_cache[value]
-        except KeyError:
-            app_label, model = value.split('.', 1)
-            value = '{app_label}.{model}'.format(app_label=app_label, model=model)
-            _ctype_cache.update({value: ContentType.objects.get(app_label=app_label, model=model)})
-        finally:
-            return _ctype_cache[value]
+        if isinstance(value, ContentType):
+            ctype_string = '{app_label}.{model}'.format(app_label=value.app_label, model=value.model)
+            if ctype_string not in _ctype_cache:
+                _ctype_cache[ctype_string] = value
+            return value
+
+        elif isinstance(value, str):
+            try:
+                return _ctype_cache[value]
+            except KeyError:
+                app_label, model = value.split('.', 1)
+                ctype_string = '{app_label}.{model}'.format(app_label=app_label, model=model)
+                if ctype_string not in _ctype_cache:
+                    _ctype_cache[ctype_string] = ContentType.objects.get(app_label=app_label, model=model)
+            finally:
+                return _ctype_cache[value]
 
     def to_mongo(self, value):
         if isinstance(value, str):
