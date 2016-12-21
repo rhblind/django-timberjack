@@ -1,6 +1,9 @@
 before_script:
   - pip install tox
 
+variables:
+  MONGO_HOST: "mongo"
+
 test:py34:
   image: python:3.4
   services:
