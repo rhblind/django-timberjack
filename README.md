@@ -1,7 +1,7 @@
 # django-timberjack
 
-[![build status](https://gitlab.com/rhblind/django-timberjack/badges/master/build.svg)](https://gitlab.com/rhblind/django-timberjack/commits/master)
-[![codecov](https://codecov.io/gl/rhblind/django-timberjack/branch/master/graph/badge.svg?token=q7jSF6EGAH)](https://codecov.io/gl/rhblind/django-timberjack)
+[![Build Status](https://travis-ci.org/rhblind/django-timberjack.svg?branch=master)](https://travis-ci.org/rhblind/django-timberjack)
+[![Coverage Status](https://coveralls.io/repos/github/rhblind/django-timberjack/badge.svg?branch=master)](https://coveralls.io/github/rhblind/django-timberjack?branch=master)
 
 
 Some kind of logging system...
