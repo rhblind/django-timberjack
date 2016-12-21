@@ -57,7 +57,7 @@ DATABASES = {
 MONGO_CONNECTIONS = {
     'default': {
         'NAME': 'default',  # Hostname or URI. If using URI, it will override all other options.
-        'HOST': 'localhost',
+        'HOST': 'mongodb' if os.environ.get('CI_SERVER') else 'localhost'
     }
 }
 
