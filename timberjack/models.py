@@ -93,8 +93,17 @@ class ObjectAccessLog(Document):
         # TODO: Do a proper implementation
         return self.message or 'No record!'
 
-    def write_admin_log(self):
-        """
-        Write a copy to the django admin log.
-        """
-        # LogEntry.objects.log_action(self.user_pk, self.content_type.pk, )
+    def save(self, *args, **kwargs):
+        instance = super(ObjectAccessLog, self).save(*args, **kwargs)
+        if kwargs.get("write_admin_log", False) is True:
+            if self.is_read_action:
+                # TODO: Unsupported action - should inform user!
+                pass
+            else:
+                LogEntry.objects.log_action(user_id=self.user_pk, content_type_id=self.content_type.pk,
+                                            object_id=self.object_pk,
+                                            object_repr=repr(self.content_type.get_object_for_this_type(
+                                                pk=self.object_pk)),
+                                            action_flag=self.action_flag, change_message=self.get_change_message())
+        return instance
+
