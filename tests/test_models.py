@@ -75,10 +75,18 @@ class ObjectAccessLogTestCase(TestCase):
                                    level=0)
         instance.save(write_admin_log=True)
 
-        entry = LogEntry.objects.get(user_id=instance.user_pk, content_type_id=instance.content_type.pk,
-                                     object_id=instance.object_pk, action_flag=instance.action_flag)
-        self.assertIsInstance(entry, LogEntry)
+        self.assertIsInstance(instance.get_admin_log_object(), LogEntry)
+        self.assertEqual(instance.get_admin_log_object(), LogEntry.objects.get(pk=instance.admin_log_pk))
 
 
 class ObjectAccessQuerySetTestCase(TestCase):
-    pass
+
+    def setUp(self):
+        self.user = USER_MODEL.objects.create_user(username='test@example.com', password='test123.')
+        self.ctype = ContentType.objects.get_for_model(self.user)
+
+    def test_queryset_log_action(self):
+        instance = ObjectAccessLog.objects.log_action(user_pk=self.user.pk, content_type=self.ctype,
+                                                      object_pk=self.user.pk, object_repr=repr(self.user),
+                                                      action_flag=1, message='test message')
+        self.assertIsInstance(instance, ObjectAccessLog)

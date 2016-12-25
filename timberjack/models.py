@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import json
+
 from django.contrib.admin.models import LogEntry
 
 from django.utils import timezone
@@ -32,8 +34,19 @@ LOG_LEVEL = (
 class ObjectAccessLogQuerySet(QuerySet):
 
     def log_action(self, user_pk, content_type, object_pk, object_repr,
-                   action_flag, message, level, ip_address, write_admin_log=False):
-        raise NotImplemented
+                   action_flag, message, level=0, ip_address=None, write_admin_log=False):
+        if isinstance(message, list):
+            message = json.dumps(message)
+        return self._document(
+            user_pk=user_pk,
+            content_type=content_type,
+            object_pk=object_pk,
+            object_repr=object_repr[:200],
+            action_flag=action_flag,
+            message=message,
+            level=level,
+            ip_address=ip_address
+        ).save(write_admin_log=write_admin_log)
 
 
 class ObjectAccessLog(Document):
@@ -50,6 +63,7 @@ class ObjectAccessLog(Document):
     object_repr = StringField(max_length=200, required=True)
     user_pk = UserPKField(required=False)
     ip_address = StringField(validation=validate_ip_address, required=False)
+    admin_log_pk = IntField(required=False, default=None)
     timestamp = DateTimeField(required=True, default=timezone.now)
 
     def __repr__(self):
@@ -93,17 +107,25 @@ class ObjectAccessLog(Document):
         # TODO: Do a proper implementation
         return self.message or 'No record!'
 
+    def get_admin_log_object(self):
+        """
+        If saved with an `admin_log_pk` attribute, look up
+        and return the corresponding object.
+        """
+        if not self.admin_log_pk:
+            return None
+        return LogEntry.objects.get(pk=self.admin_log_pk)
+
     def save(self, *args, **kwargs):
-        instance = super(ObjectAccessLog, self).save(*args, **kwargs)
         if kwargs.get("write_admin_log", False) is True:
             if self.is_read_action:
                 # TODO: Unsupported action - should inform user!
                 pass
             else:
-                LogEntry.objects.log_action(user_id=self.user_pk, content_type_id=self.content_type.pk,
-                                            object_id=self.object_pk,
-                                            object_repr=repr(self.content_type.get_object_for_this_type(
-                                                pk=self.object_pk)),
-                                            action_flag=self.action_flag, change_message=self.get_change_message())
-        return instance
+                self.admin_log_pk = LogEntry.objects.create(user_id=self.user_pk, content_type_id=self.content_type.pk,
+                                                            object_id=self.object_pk,
+                                                            object_repr=repr(self.content_type.get_object_for_this_type(
+                                                                pk=self.object_pk))[:200], action_flag=self.action_flag,
+                                                            change_message=self.get_change_message()).pk
+        return super(ObjectAccessLog, self).save(*args, **kwargs)
 
