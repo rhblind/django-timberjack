@@ -6,6 +6,7 @@ from django.contrib.admin.models import LogEntry
 
 from django.utils import timezone
 from django.utils.encoding import smart_text
+from django.utils.text import get_text_list
 from django.utils.translation import ugettext, ugettext_lazy as _
 
 from mongoengine import *
@@ -102,10 +103,45 @@ class ObjectAccessLog(Document):
 
     def get_change_message(self):
         """
-        See admin.LogEntry.
+        (Copied from `django.contrib.admin.models.LogEntry.get_change_message()`)
+
+        If self.change_message is a JSON structure, interpret it as a change
+        string, properly translated.
         """
-        # TODO: Do a proper implementation
-        return self.message or 'No record!'
+        if self.message and self.message[0] == '[':
+            try:
+                message = json.loads(self.message)
+            except ValueError:
+                return self.message
+            messages = []
+            for sub_message in message:
+                if 'added' in sub_message:
+                    if sub_message['added']:
+                        sub_message['added']['name'] = ugettext(sub_message['added']['name'])
+                        messages.append(ugettext('Added {name} "{object}".').format(**sub_message['added']))
+                    else:
+                        messages.append(ugettext('Added.'))
+
+                elif 'changed' in sub_message:
+                    sub_message['changed']['fields'] = get_text_list(
+                        sub_message['changed']['fields'], ugettext('and')
+                    )
+                    if 'name' in sub_message['changed']:
+                        sub_message['changed']['name'] = ugettext(sub_message['changed']['name'])
+                        messages.append(ugettext('Changed {fields} for {name} "{object}".').format(
+                            **sub_message['changed']
+                        ))
+                    else:
+                        messages.append(ugettext('Changed {fields}.').format(**sub_message['changed']))
+
+                elif 'deleted' in sub_message:
+                    sub_message['deleted']['name'] = ugettext(sub_message['deleted']['name'])
+                    messages.append(ugettext('Deleted {name} "{object}".').format(**sub_message['deleted']))
+
+            message = ' '.join(msg[0].upper() + msg[1:] for msg in messages)
+            return message or ugettext('No fields changed.')
+        else:
+            return self.message
 
     def get_admin_log_object(self):
         """
@@ -128,4 +164,3 @@ class ObjectAccessLog(Document):
                                                                 pk=self.object_pk))[:200], action_flag=self.action_flag,
                                                             change_message=self.get_change_message()).pk
         return super(ObjectAccessLog, self).save(*args, **kwargs)
-
