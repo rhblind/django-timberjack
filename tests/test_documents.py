@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
-from timberjack.models import (
+from timberjack.documents import (
     CREATE, UPDATE, DELETE, READ, LOG_LEVEL,
     ObjectAccessLog
 )
@@ -67,7 +67,7 @@ class ObjectAccessLogTestCase(TestCase):
         self.assertEqual(instance.get_change_message(), 'test message')
 
         instance.message = ''
-        self.assertEqual(instance.get_change_message(), 'No record!')
+        self.assertEqual(instance.get_change_message(), '')
 
     def test_model_write_admin_log(self):
         instance = ObjectAccessLog(user_pk=self.user.pk, content_type=self.ctype, object_pk=self.user.pk,
