@@ -12,5 +12,6 @@ def validate_ip_address(value):
     """
     try:
         validate_ipv46_address(value)
+        return value
     except DjangoValidationError as e:
         raise ValidationError(str(e))

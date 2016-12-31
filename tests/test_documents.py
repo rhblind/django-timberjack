@@ -40,12 +40,12 @@ class ObjectAccessLogTestCase(TestCase):
         self.user = USER_MODEL.objects.create_user(username='test@example.com', password='test123.')
         self.ctype = ContentType.objects.get_for_model(self.user)
 
-    def test_initialize_model(self):
+    def test_document_initialize(self):
         instance = ObjectAccessLog(user_pk=self.user.pk, content_type=self.ctype, object_pk=self.user.pk,
                                    object_repr=repr(self.user), action_flag=1, message='test message')
         self.assertIsInstance(instance, ObjectAccessLog)
 
-    def test_model_properties(self):
+    def test_document_properties(self):
         instance = ObjectAccessLog(user_pk=self.user.pk, content_type=self.ctype, object_pk=self.user.pk,
                                    object_repr=repr(self.user), action_flag=1, message='test message',
                                    level=0)
@@ -60,7 +60,7 @@ class ObjectAccessLogTestCase(TestCase):
         instance.action_flag = 4
         self.assertTrue(instance.is_read_action)
 
-    def test_get_change_message(self):
+    def test_document_get_change_message(self):
         instance = ObjectAccessLog(user_pk=self.user.pk, content_type=self.ctype, object_pk=self.user.pk,
                                    object_repr=repr(self.user), action_flag=1, message='test message',
                                    level=0)
@@ -69,7 +69,7 @@ class ObjectAccessLogTestCase(TestCase):
         instance.message = ''
         self.assertEqual(instance.get_change_message(), '')
 
-    def test_model_write_admin_log(self):
+    def test_document_write_admin_log(self):
         instance = ObjectAccessLog(user_pk=self.user.pk, content_type=self.ctype, object_pk=self.user.pk,
                                    object_repr=repr(self.user), action_flag=1, message='test message',
                                    level=0)
@@ -77,6 +77,19 @@ class ObjectAccessLogTestCase(TestCase):
 
         self.assertIsInstance(instance.get_admin_log_object(), LogEntry)
         self.assertEqual(instance.get_admin_log_object(), LogEntry.objects.get(pk=instance.admin_log_pk))
+
+    def test_document_referrer(self):
+        instance1 = ObjectAccessLog(user_pk=self.user.pk, content_type=self.ctype, object_pk=self.user.pk,
+                                    object_repr=repr(self.user), action_flag=1, message='message 1',
+                                    level=0)
+        instance1.save()
+
+        instance2 = ObjectAccessLog(user_pk=self.user.pk, content_type=self.ctype, object_pk=self.user.pk,
+                                    object_repr=repr(self.user), action_flag=1, message='message 2',
+                                    level=0, referrer=instance1)
+        instance2.save()
+
+        self.assertEqual(instance1, instance2.referrer)
 
 
 class ObjectAccessQuerySetTestCase(TestCase):

@@ -3,6 +3,7 @@
 import json
 
 from django.contrib.admin.models import LogEntry
+from django.contrib.contenttypes.models import ContentType
 
 from django.utils import timezone
 from django.utils.encoding import smart_text
@@ -56,15 +57,16 @@ class ObjectAccessLog(Document):
         'queryset_class': ObjectAccessLogQuerySet
     }
 
-    message = StringField(default='')
+    message = StringField(default='', required=True)
     action_flag = IntField(min_value=1, max_value=4, required=True)
-    level = IntField(choices=LOG_LEVEL, default=0)
+    level = IntField(choices=LOG_LEVEL, default=0, required=True)
     object_pk = DynamicField(required=True)
     content_type = ContentTypeField(required=True)
     object_repr = StringField(max_length=200, required=True)
-    user_pk = UserPKField(required=False)
-    ip_address = StringField(validation=validate_ip_address, required=False)
-    admin_log_pk = IntField(required=False, default=None)
+    user_pk = UserPKField(default=None)
+    ip_address = StringField(validation=validate_ip_address)
+    admin_log_pk = IntField(default=None)
+    referrer = ReferenceField('self', default=None)
     timestamp = DateTimeField(required=True, default=timezone.now)
 
     def __repr__(self):
@@ -115,24 +117,24 @@ class ObjectAccessLog(Document):
                 return self.message
             messages = []
             for sub_message in message:
-                if 'added' in sub_message:
-                    if sub_message['added']:
-                        sub_message['added']['name'] = ugettext(sub_message['added']['name'])
-                        messages.append(ugettext('Added {name} "{object}".').format(**sub_message['added']))
+                if 'created' in sub_message:
+                    if sub_message['created']:
+                        sub_message['created']['name'] = ugettext(sub_message['created']['name'])
+                        messages.append(ugettext('Created {name} "{object}".').format(**sub_message['created']))
                     else:
-                        messages.append(ugettext('Added.'))
+                        messages.append(ugettext('Created.'))
 
-                elif 'changed' in sub_message:
-                    sub_message['changed']['fields'] = get_text_list(
-                        sub_message['changed']['fields'], ugettext('and')
+                elif 'updated' in sub_message:
+                    sub_message['updated']['fields'] = get_text_list(
+                        sub_message['updated']['fields'], ugettext('and')
                     )
-                    if 'name' in sub_message['changed']:
-                        sub_message['changed']['name'] = ugettext(sub_message['changed']['name'])
-                        messages.append(ugettext('Changed {fields} for {name} "{object}".').format(
-                            **sub_message['changed']
+                    if 'name' in sub_message['updated']:
+                        sub_message['updated']['name'] = ugettext(sub_message['updated']['name'])
+                        messages.append(ugettext('Updated {fields} for {name} "{object}".').format(
+                            **sub_message['updated']
                         ))
                     else:
-                        messages.append(ugettext('Changed {fields}.').format(**sub_message['changed']))
+                        messages.append(ugettext('Updated {fields}.').format(**sub_message['updated']))
 
                 elif 'deleted' in sub_message:
                     sub_message['deleted']['name'] = ugettext(sub_message['deleted']['name'])
@@ -150,7 +152,13 @@ class ObjectAccessLog(Document):
         """
         if not self.admin_log_pk:
             return None
-        return LogEntry.objects.get(pk=self.admin_log_pk)
+        try:
+            return LogEntry.objects.get(pk=self.admin_log_pk)
+        except LogEntry.DoesNotExist:
+            return None
+
+    def get_content_object(self):
+        return self.content_type.get_object_for_this_type(pk=self.object_pk)
 
     def save(self, *args, **kwargs):
         if kwargs.get("write_admin_log", False) is True:
