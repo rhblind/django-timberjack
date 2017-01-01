@@ -38,7 +38,8 @@ setup(
     ],
     tests_require=[
         'nose',
-        'coverage'
+        'coverage',
+        'djangorestframework'
     ],
     zip_safe=False,
     test_suite='tests.run_tests.start',
