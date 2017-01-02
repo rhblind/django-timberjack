@@ -45,7 +45,7 @@ setup(
     test_suite='tests.run_tests.start',
     classifiers=[
         'Operating System :: OS Independent',
-        'Development Status :: 4 - Beta',
+        'Development Status :: 3 - Alpha',
         'Environment :: Web Environment',
         'Framework :: Django',
         'Intended Audience :: Developers',
