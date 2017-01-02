@@ -4,10 +4,10 @@ from django.contrib.admin.options import get_content_type_for_model
 from django.utils.encoding import force_text
 
 from timberjack.documents import ObjectAccessLog
-from timberjack.utils import MethodActionMap, MessageGenerator
+from timberjack.utils import MethodActionMap, BaseObjectAccessLogMixin
 
 
-class AccessLogModelMixin(MessageGenerator):
+class AccessLogModelViewMixin(BaseObjectAccessLogMixin):
     """
     Mixin class for `ModelViewSet` which writes object access log
     to mongodb.
@@ -38,10 +38,10 @@ class AccessLogModelMixin(MessageGenerator):
                                    'name': force_text(instance._meta.verbose_name),
                                    'object': force_text(instance)
                                }}])
-        return super(AccessLogModelMixin, self).retrieve(request, *args, **kwargs)
+        return super(AccessLogModelViewMixin, self).retrieve(request, *args, **kwargs)
 
     def perform_create(self, serializer):
-        super(AccessLogModelMixin, self).perform_create(serializer)
+        super(AccessLogModelViewMixin, self).perform_create(serializer)
         self.log_object_action(self.request, serializer.instance,
                                message=[{'created': {
                                    'name': force_text(serializer.instance._meta.verbose_name),
@@ -49,7 +49,7 @@ class AccessLogModelMixin(MessageGenerator):
                                }}])
 
     def perform_update(self, serializer):
-        super(AccessLogModelMixin, self).perform_update(serializer)
+        super(AccessLogModelViewMixin, self).perform_update(serializer)
         self.log_object_action(self.request, serializer.instance,
                                message=[{'updated': {
                                    'name': force_text(serializer.instance._meta.verbose_name),
@@ -63,4 +63,4 @@ class AccessLogModelMixin(MessageGenerator):
                                    'name': force_text(instance._meta.verbose_name),
                                    'object': force_text(instance)
                                }}])
-        super(AccessLogModelMixin, self).perform_destroy(instance)
+        super(AccessLogModelViewMixin, self).perform_destroy(instance)

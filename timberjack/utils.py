@@ -27,7 +27,7 @@ class MethodActionMap(object):
         return self.action_map.get(self._method, None)
 
 
-class MessageGenerator(object):
+class BaseObjectAccessLogMixin(object):
     """
     Some docstring here..
     """

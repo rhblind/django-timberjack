@@ -21,7 +21,7 @@ class UserSerializer(ModelSerializer):
         fields = '__all__'
 
 
-class UserViewSet(mixins.AccessLogModelMixin, ModelViewSet):
+class UserViewSet(mixins.AccessLogModelViewMixin, ModelViewSet):
     write_admin_log = True
     serializer_class = UserSerializer
     queryset = User.objects.all()
@@ -34,8 +34,8 @@ urlpatterns = [
 ]
 
 
-@override_settings(ROOT_URLCONF='tests.test_rest_framework_compat')
-class AccessLogModelMixinTestCase(APITestCase):
+@override_settings(ROOT_URLCONF='tests.test_rest_framework_mixin')
+class AccessLogModelViewMixinTestCase(APITestCase):
 
     def setUp(self):
         self.user = User.objects.create_user('testuser', 'testuser@example.com', 'test123.')
