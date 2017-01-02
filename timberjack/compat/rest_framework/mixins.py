@@ -3,7 +3,6 @@
 from django.contrib.admin.options import get_content_type_for_model
 from django.utils.encoding import force_text
 
-from timberjack.constants import CREATE, UPDATE, DELETE, READ
 from timberjack.documents import ObjectAccessLog
 from timberjack.utils import MethodActionMap, MessageGenerator
 
