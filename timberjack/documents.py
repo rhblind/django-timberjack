@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import json
+import logging
 
 from django.contrib.admin.models import LogEntry
-from django.contrib.contenttypes.models import ContentType
-
 from django.utils import timezone
 from django.utils.encoding import smart_text
 from django.utils.text import get_text_list
@@ -13,15 +12,9 @@ from django.utils.translation import ugettext, ugettext_lazy as _
 from mongoengine import *
 from mongoengine.queryset import QuerySet
 
+from timberjack.constants import CREATE, READ, UPDATE, DELETE
 from timberjack.fields import ContentTypeField, UserPKField
 from timberjack.validators import validate_ip_address
-
-# We want to log CRUD actions.
-# (keep numerical values compatible with admin.LogEntry model)
-CREATE = 1
-UPDATE = 2
-DELETE = 3
-READ = 4
 
 LOG_LEVEL = (
     (0, _('NOTSET')),
@@ -31,6 +24,8 @@ LOG_LEVEL = (
     (40, _('ERROR')),
     (50, _('CRITICAL'))
 )
+
+logger = logging.getLogger('timberjack')
 
 
 class ObjectAccessLogQuerySet(QuerySet):
@@ -57,9 +52,9 @@ class ObjectAccessLog(Document):
         'queryset_class': ObjectAccessLogQuerySet
     }
 
-    message = StringField(default='', required=True)
+    message = StringField(default='')
     action_flag = IntField(min_value=1, max_value=4, required=True)
-    level = IntField(choices=LOG_LEVEL, default=0, required=True)
+    level = IntField(choices=LOG_LEVEL, default=0)
     object_pk = DynamicField(required=True)
     content_type = ContentTypeField(required=True)
     object_repr = StringField(max_length=200, required=True)
@@ -103,7 +98,7 @@ class ObjectAccessLog(Document):
     def is_delete_action(self):
         return self.action_flag == DELETE
 
-    def get_change_message(self):
+    def get_log_message(self):
         """
         (Copied from `django.contrib.admin.models.LogEntry.get_change_message()`)
 
@@ -140,6 +135,13 @@ class ObjectAccessLog(Document):
                     sub_message['deleted']['name'] = ugettext(sub_message['deleted']['name'])
                     messages.append(ugettext('Deleted {name} "{object}".').format(**sub_message['deleted']))
 
+                elif 'read' in sub_message:
+                    if sub_message['read']:
+                        sub_message['read']['name'] = ugettext(sub_message['read']['name'])
+                        messages.append(ugettext('Read {name} "{object}".').format(**sub_message['read']))
+                    else:
+                        messages.append(ugettext('Read.'))
+
             message = ' '.join(msg[0].upper() + msg[1:] for msg in messages)
             return message or ugettext('No fields changed.')
         else:
@@ -161,14 +163,14 @@ class ObjectAccessLog(Document):
         return self.content_type.get_object_for_this_type(pk=self.object_pk)
 
     def save(self, *args, **kwargs):
-        if kwargs.get("write_admin_log", False) is True:
+        if kwargs.get('write_admin_log', False) is True:
             if self.is_read_action:
-                # TODO: Unsupported action - should inform user!
-                pass
+                logging.debug('Read actions are not written to the `admin.LogEntry` table due '
+                              'to missing support for read actions.')
             else:
                 self.admin_log_pk = LogEntry.objects.create(user_id=self.user_pk, content_type_id=self.content_type.pk,
                                                             object_id=self.object_pk,
                                                             object_repr=repr(self.content_type.get_object_for_this_type(
                                                                 pk=self.object_pk))[:200], action_flag=self.action_flag,
-                                                            change_message=self.get_change_message()).pk
+                                                            change_message=self.get_log_message()).pk
         return super(ObjectAccessLog, self).save(*args, **kwargs)

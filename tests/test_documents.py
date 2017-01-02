@@ -5,10 +5,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
-from timberjack.documents import (
-    CREATE, UPDATE, DELETE, READ, LOG_LEVEL,
-    ObjectAccessLog
-)
+from timberjack.constants import CREATE, UPDATE, DELETE, READ
+from timberjack.documents import LOG_LEVEL, ObjectAccessLog
 
 USER_MODEL = get_user_model()
 
@@ -60,14 +58,14 @@ class ObjectAccessLogTestCase(TestCase):
         instance.action_flag = 4
         self.assertTrue(instance.is_read_action)
 
-    def test_document_get_change_message(self):
+    def test_document_get_log_message(self):
         instance = ObjectAccessLog(user_pk=self.user.pk, content_type=self.ctype, object_pk=self.user.pk,
                                    object_repr=repr(self.user), action_flag=1, message='test message',
                                    level=0)
-        self.assertEqual(instance.get_change_message(), 'test message')
+        self.assertEqual(instance.get_log_message(), 'test message')
 
         instance.message = ''
-        self.assertEqual(instance.get_change_message(), '')
+        self.assertEqual(instance.get_log_message(), '')
 
     def test_document_write_admin_log(self):
         instance = ObjectAccessLog(user_pk=self.user.pk, content_type=self.ctype, object_pk=self.user.pk,

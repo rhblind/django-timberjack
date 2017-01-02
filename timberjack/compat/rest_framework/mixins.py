@@ -1,64 +1,67 @@
 # -*- coding: utf-8 -*-
-from django.contrib.contenttypes.models import ContentType
 
-from timberjack.documents import CREATE, UPDATE, DELETE, READ, ObjectAccessLog
+from django.contrib.admin.options import get_content_type_for_model
+from django.utils.encoding import force_text
 
-
-class MethodActionMap(object):
-    action_map = {
-        "GET": READ,
-        "POST": CREATE,
-        "PUT": UPDATE,
-        "PATCH": UPDATE,
-        "DELETE": DELETE,
-    }
-
-    def __init__(self, request):
-        self._method = request.method
-
-    @property
-    def method(self):
-        return self.action_map.get(self._method, None)
+from timberjack.constants import CREATE, UPDATE, DELETE, READ
+from timberjack.documents import ObjectAccessLog
+from timberjack.utils import MethodActionMap, MessageGenerator
 
 
-class ObjectAccessLogMixin(object):
+class AccessLogModelMixin(MessageGenerator):
     """
-    Provides logging for actions performed on Rest Framework Views.
+    Mixin class for `ModelViewSet` which writes object access log
+    to mongodb.
     """
 
-    method_action_map_class = MethodActionMap
     default_log_level = 0
+    method_action_map_class = MethodActionMap
     write_admin_log = False
 
-    def get_method_action_map_class(self):
-        assert self.method_action_map_class is not None, (
-            "'%s' should either include a `method_action_map_class` attribute, "
-            "or override the `get_method_action_map_class()` method."
-            % self.__class__.__name__
-        )
-        return self.method_action_map_class
-
-    def get_method_action(self, request):
-        method_action_class = self.get_method_action_map_class()
-        return method_action_class(request).method
-
-    def log_object_action(self, request, obj):
+    def log_object_action(self, request, obj, message):
         action_flag = self.get_method_action(request)
 
         if not action_flag:
             # Unsupported HTTP method; do nothing.
             return
 
-        # TODO: Construct message
-        message = 'To be constructed'
-        ObjectAccessLog.objects.log_action(user_pk=request.user.pk, content_type=ContentType.objects.get_for_model(obj),
+        ObjectAccessLog.objects.log_action(user_pk=request.user.pk, content_type=get_content_type_for_model(obj),
                                            object_pk=obj.pk, object_repr=repr(obj), action_flag=action_flag,
                                            message=message, level=self.default_log_level,
                                            ip_address=request.META.get('HTTP_X_FORWARDED_FOR') or
                                                       request.META.get('REMOTE_ADDR'),
                                            write_admin_log=self.write_admin_log)
 
-    def get_object(self):
-        obj = super(ObjectAccessLogMixin, self).get_object()
-        self.log_object_action(self.request, obj)
-        return obj
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.log_object_action(self.request, instance,
+                               message=[{'read': {
+                                   'name': force_text(instance._meta.verbose_name),
+                                   'object': force_text(instance)
+                               }}])
+        return super(AccessLogModelMixin, self).retrieve(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        super(AccessLogModelMixin, self).perform_create(serializer)
+        self.log_object_action(self.request, serializer.instance,
+                               message=[{'created': {
+                                   'name': force_text(serializer.instance._meta.verbose_name),
+                                   'object': force_text(serializer.instance)
+                               }}])
+
+    def perform_update(self, serializer):
+        super(AccessLogModelMixin, self).perform_update(serializer)
+        self.log_object_action(self.request, serializer.instance,
+                               message=[{'updated': {
+                                   'name': force_text(serializer.instance._meta.verbose_name),
+                                   'object': force_text(serializer.instance),
+                                   'fields': list(serializer.validated_data.keys())
+                               }}])
+
+    def perform_destroy(self, instance):
+        self.log_object_action(self.request, instance,
+                               message=[{'deleted': {
+                                   'name': force_text(instance._meta.verbose_name),
+                                   'object': force_text(instance)
+                               }}])
+        super(AccessLogModelMixin, self).perform_destroy(instance)

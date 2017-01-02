@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from django.conf.urls import include, url
-from django.contrib.admin.models import LogEntry
 from django.contrib.auth.models import User
 from django.test import override_settings
 from rest_framework import status
@@ -22,7 +21,7 @@ class UserSerializer(ModelSerializer):
         fields = '__all__'
 
 
-class UserViewSet(mixins.ObjectAccessLogMixin, ModelViewSet):
+class UserViewSet(mixins.AccessLogModelMixin, ModelViewSet):
     write_admin_log = True
     serializer_class = UserSerializer
     queryset = User.objects.all()
@@ -36,7 +35,7 @@ urlpatterns = [
 
 
 @override_settings(ROOT_URLCONF='tests.test_rest_framework_compat')
-class ObjectAccessLogMixinTestCase(APITestCase):
+class AccessLogModelMixinTestCase(APITestCase):
 
     def setUp(self):
         self.user = User.objects.create_user('testuser', 'testuser@example.com', 'test123.')
@@ -58,7 +57,7 @@ class ObjectAccessLogMixinTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         instance = ObjectAccessLog.objects.filter(action_flag=CREATE).order_by('-timestamp').first()
-        self.assertEqual(instance.get_content_object(), self.user)
+        self.assertEqual(instance.get_content_object(), User.objects.get(username='another-user'))
 
     def test_patch_object_is_logged(self):
         response = self.client.patch(reverse('user-detail', kwargs={'pk': self.user.pk}), data={
