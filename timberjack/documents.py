@@ -165,8 +165,11 @@ class ObjectAccessLog(Document):
     def save(self, *args, **kwargs):
         if kwargs.get('write_admin_log', False) is True:
             if self.is_read_action:
-                logging.debug('Read actions are not written to the `admin.LogEntry` table due '
-                              'to missing support for read actions.')
+                logger.debug('Read actions are not written to the `admin.LogEntry` table due '
+                             'to missing support for read actions.')
+            elif not self.user_pk:
+                logger.debug('Action cannot be written to the `admin.LogEntry` table due '
+                             'to missing `user_id` value.')
             else:
                 self.admin_log_pk = LogEntry.objects.create(user_id=self.user_pk, content_type_id=self.content_type.pk,
                                                             object_id=self.object_pk,
