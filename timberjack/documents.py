@@ -69,9 +69,9 @@ class ObjectAccessLog(Document):
 
     def __str__(self):
         if self.is_create_action:
-            return ugettext('Created "%(object)s.') % {'object': self.object_repr}
+            return ugettext('Added "%(object)s.') % {'object': self.object_repr}
         elif self.is_update_action:
-            return ugettext('Updated "%(object)s - %(changes)s"') % {
+            return ugettext('Changed "%(object)s - %(changes)s"') % {
                 'object': self.object_repr,
                 'changes': self.get_change_message()
             }
@@ -112,24 +112,24 @@ class ObjectAccessLog(Document):
                 return self.message
             messages = []
             for sub_message in message:
-                if 'created' in sub_message:
-                    if sub_message['created']:
-                        sub_message['created']['name'] = ugettext(sub_message['created']['name'])
-                        messages.append(ugettext('Created {name} "{object}".').format(**sub_message['created']))
+                if 'added' in sub_message:
+                    if sub_message['added']:
+                        sub_message['added']['name'] = ugettext(sub_message['added']['name'])
+                        messages.append(ugettext('Added {name} "{object}".').format(**sub_message['added']))
                     else:
-                        messages.append(ugettext('Created.'))
+                        messages.append(ugettext('Added.'))
 
-                elif 'updated' in sub_message:
-                    sub_message['updated']['fields'] = get_text_list(
-                        sub_message['updated']['fields'], ugettext('and')
+                elif 'changed' in sub_message:
+                    sub_message['changed']['fields'] = get_text_list(
+                        sub_message['changed']['fields'], ugettext('and')
                     )
-                    if 'name' in sub_message['updated']:
-                        sub_message['updated']['name'] = ugettext(sub_message['updated']['name'])
-                        messages.append(ugettext('Updated {fields} for {name} "{object}".').format(
-                            **sub_message['updated']
+                    if 'name' in sub_message['changed']:
+                        sub_message['changed']['name'] = ugettext(sub_message['changed']['name'])
+                        messages.append(ugettext('Changed {fields} for {name} "{object}".').format(
+                            **sub_message['changed']
                         ))
                     else:
-                        messages.append(ugettext('Updated {fields}.').format(**sub_message['updated']))
+                        messages.append(ugettext('Changed {fields}.').format(**sub_message['changed']))
 
                 elif 'deleted' in sub_message:
                     sub_message['deleted']['name'] = ugettext(sub_message['deleted']['name'])
@@ -175,5 +175,5 @@ class ObjectAccessLog(Document):
                                                             object_id=self.object_pk,
                                                             object_repr=repr(self.content_type.get_object_for_this_type(
                                                                 pk=self.object_pk))[:200], action_flag=self.action_flag,
-                                                            change_message=self.get_log_message()).pk
+                                                            change_message=self.message).pk
         return super(ObjectAccessLog, self).save(*args, **kwargs)

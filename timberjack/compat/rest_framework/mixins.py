@@ -43,7 +43,7 @@ class AccessLogModelViewMixin(BaseObjectAccessLogMixin):
     def perform_create(self, serializer):
         super(AccessLogModelViewMixin, self).perform_create(serializer)
         self.log_object_action(self.request, serializer.instance,
-                               message=[{'created': {
+                               message=[{'added': {
                                    'name': force_text(serializer.instance._meta.verbose_name),
                                    'object': force_text(serializer.instance)
                                }}])
@@ -51,7 +51,7 @@ class AccessLogModelViewMixin(BaseObjectAccessLogMixin):
     def perform_update(self, serializer):
         super(AccessLogModelViewMixin, self).perform_update(serializer)
         self.log_object_action(self.request, serializer.instance,
-                               message=[{'updated': {
+                               message=[{'changed': {
                                    'name': force_text(serializer.instance._meta.verbose_name),
                                    'object': force_text(serializer.instance),
                                    'fields': list(serializer.validated_data.keys())
