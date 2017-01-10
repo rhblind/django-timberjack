@@ -25,8 +25,8 @@ setup(
     long_description='Store events and stuff in MongoDB',
     author='Rolf Håvard Blindheim',
     author_email='rhblind@gmail.com',
-    url='https://gitlab.com/rhblind/django-timberjack',
-    download_url='https://gitlab.com/rhblind/django-timberjack.git',
+    url='https://github.com/rhblind/django-timberjack',
+    download_url='https://github.com/rhblind/django-timberjack.git',
     license='MIT License',
     packages=[
         'timberjack',
@@ -34,7 +34,8 @@ setup(
     include_package_data=True,
     install_requires=[
         'Django>=1.8.0',
-        'mongoengine>=0.10.6'
+        'mongoengine>=0.10.6',
+        'django-mongo-connection>=0.0.2'
     ],
     tests_require=[
         'nose',

@@ -14,6 +14,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'mongo_connection',
     'timberjack'
 ]
 
@@ -58,7 +59,7 @@ DATABASES = {
 
 MONGO_CONNECTIONS = {
     'default': {
-        'NAME': 'default',  # Hostname or URI. If using URI, it will override all other options.
+        'NAME': 'default',
         'HOST': os.environ.get('MONGO_HOST', 'localhost')
     }
 }
