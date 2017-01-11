@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import re
+import json
 import operator
 from functools import reduce
 
@@ -106,7 +107,7 @@ class UserPKField(fields.DynamicField):
             self.error(message)
 
 
-class ModelField(fields.StringField):
+class ModelField(fields.DictField):
     """
     Store a serialized model instance.
     """
@@ -115,13 +116,14 @@ class ModelField(fields.StringField):
     }
 
     def to_python(self, value):
-        value = '[{value}]'.format(value=value)  # Insert square brackets!
+        value = '[{value}]'.format(value=json.loads(value))  # Insert square brackets!
         deserialized = next(serializers.deserialize('json', value, ignorenonexistent=True), None)
         return getattr(deserialized, 'object', None)
 
     def to_mongo(self, value, **options):
         value = serializers.serialize('json', [value], **options)
-        return value[1:-1]  # Trim off square brackets!
+        value = value[1:-1]  # Trim off square brackets!
+        return json.dumps(value)
 
     def validate(self, value):
         if not isinstance(value, Model):
