@@ -24,7 +24,7 @@ class AccessLogModelViewMixin(BaseObjectAccessLogMixin):
             # Unsupported HTTP method; do nothing.
             return
 
-        ObjectAccessLog.objects.log_action(user_pk=request.user.pk, content_type=get_content_type_for_model(obj),
+        ObjectAccessLog.objects.log_action(user=request.user, content_type=get_content_type_for_model(obj),
                                            object_pk=obj.pk, object_repr=repr(obj), action_flag=action_flag,
                                            message=message, level=self.default_log_level,
                                            ip_address=request.META.get('HTTP_X_FORWARDED_FOR') or

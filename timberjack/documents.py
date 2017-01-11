@@ -12,7 +12,7 @@ from django.utils.translation import ugettext, ugettext_lazy as _
 from mongoengine import *
 from mongoengine.queryset import QuerySet
 
-from timberjack.fields import ContentTypeField, UserPKField
+from timberjack.fields import ContentTypeField, UserPKField, ModelField
 from timberjack.validators import validate_ip_address
 
 LOG_LEVEL = (
@@ -29,12 +29,12 @@ logger = logging.getLogger('timberjack')
 
 class ObjectAccessLogQuerySet(QuerySet):
 
-    def log_action(self, user_pk, content_type, object_pk, object_repr,
+    def log_action(self, user, content_type, object_pk, object_repr,
                    action_flag, message, level=0, ip_address=None, write_admin_log=False):
         if isinstance(message, list):
             message = json.dumps(message)
         return self._document(
-            user_pk=user_pk,
+            user=user,
             content_type=content_type,
             object_pk=object_pk,
             object_repr=object_repr[:200],
@@ -43,13 +43,6 @@ class ObjectAccessLogQuerySet(QuerySet):
             level=level,
             ip_address=ip_address
         ).save(write_admin_log=write_admin_log)
-
-
-class User(EmbeddedDocument):
-    """
-    Represents a Django user
-    """
-    pk = UserPKField(default=None)
 
 
 class ObjectAccessLog(Document):
@@ -77,7 +70,7 @@ class ObjectAccessLog(Document):
     object_pk = DynamicField(required=True)
     content_type = ContentTypeField(required=True)
     object_repr = StringField(max_length=200, required=True)
-    user_pk = UserPKField(default=None)
+    user = ModelField(required=True)
     ip_address = StringField(validation=validate_ip_address)
     admin_log_pk = IntField(default=None)
     referrer = ReferenceField('self', default=None)
@@ -186,11 +179,11 @@ class ObjectAccessLog(Document):
             if self.is_read_action:
                 logger.debug('Read actions are not written to the `admin.LogEntry` table due '
                              'to missing support for read actions.')
-            elif not self.user_pk:
+            elif not self.user:
                 logger.debug('Action cannot be written to the `admin.LogEntry` table due '
-                             'to missing `user_id` value.')
+                             'to missing `user` value.')
             else:
-                self.admin_log_pk = LogEntry.objects.create(user_id=self.user_pk, content_type_id=self.content_type.pk,
+                self.admin_log_pk = LogEntry.objects.create(user_id=self.user.pk, content_type_id=self.content_type.pk,
                                                             object_id=self.object_pk,
                                                             object_repr=repr(self.content_type.get_object_for_this_type(
                                                                 pk=self.object_pk))[:200], action_flag=self.action_flag,

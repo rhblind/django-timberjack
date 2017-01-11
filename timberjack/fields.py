@@ -10,6 +10,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Model
+from django.utils import six
 from django.utils.translation import ugettext_lazy as _
 
 from mongoengine import fields
@@ -107,7 +108,7 @@ class UserPKField(fields.DynamicField):
             self.error(message)
 
 
-class ModelField(fields.DictField):
+class ModelField(fields.StringField):
     """
     Store a serialized model instance.
     """
@@ -116,14 +117,16 @@ class ModelField(fields.DictField):
     }
 
     def to_python(self, value):
-        value = '[{value}]'.format(value=json.loads(value))  # Insert square brackets!
-        deserialized = next(serializers.deserialize('json', value, ignorenonexistent=True), None)
-        return getattr(deserialized, 'object', None)
+        if isinstance(value, Model):
+            return value
+        elif isinstance(value, six.text_type):
+            value = '[{value}]'.format(value=value)  # Insert square brackets!
+            deserialized = next(serializers.deserialize('json', value, ignorenonexistent=True), None)
+            return getattr(deserialized, 'object', None)
 
     def to_mongo(self, value, **options):
         value = serializers.serialize('json', [value], **options)
-        value = value[1:-1]  # Trim off square brackets!
-        return json.dumps(value)
+        return value[1:-1]  # Trim off square brackets!
 
     def validate(self, value):
         if not isinstance(value, Model):
