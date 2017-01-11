@@ -4,9 +4,11 @@ import re
 import operator
 from functools import reduce
 
+from django.core import serializers
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Model
 from django.utils.translation import ugettext_lazy as _
 
 from mongoengine import fields
@@ -102,4 +104,30 @@ class UserPKField(fields.DynamicField):
                 'field': self.pk_field
             }
             self.error(message)
+
+
+class ModelField(fields.StringField):
+    """
+    Store a serialized model instance.
+    """
+    default_error_messages = {
+        'non_model_instance': _('Value %(value)r is not a django.db.models.Model instance.')
+    }
+
+    def to_python(self, value):
+        value = '[{value}]'.format(value=value)  # Insert square brackets!
+        deserialized = next(serializers.deserialize('json', value, ignorenonexistent=True), None)
+        return getattr(deserialized, 'object', None)
+
+    def to_mongo(self, value, **options):
+        value = serializers.serialize('json', [value], **options)
+        return value[1:-1]  # Trim off square brackets!
+
+    def validate(self, value):
+        if not isinstance(value, Model):
+            message = self.default_error_messages['non_model_instance'] % {
+                'value': value
+            }
+            self.error(message)
+
 

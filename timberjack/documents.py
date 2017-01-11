@@ -45,8 +45,17 @@ class ObjectAccessLogQuerySet(QuerySet):
         ).save(write_admin_log=write_admin_log)
 
 
-class ObjectAccessLog(Document):
+class User(EmbeddedDocument):
+    """
+    Represents a Django user
+    """
+    pk = UserPKField(default=None)
 
+
+class ObjectAccessLog(Document):
+    """
+    Store log entries.
+    """
     CREATE_ACTION = ADDITION
     UPDATE_ACTION = CHANGE
     DELETE_ACTION = DELETION

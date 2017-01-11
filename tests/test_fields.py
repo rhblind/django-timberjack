@@ -2,13 +2,14 @@
 
 import uuid
 
+from django.contrib.auth import get_user_model
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.test import TestCase, override_settings
 
 from mongoengine import ValidationError
-from timberjack.fields import ContentType, ContentTypeField, UserPKField
+from timberjack.fields import ContentType, ContentTypeField, UserPKField, ModelField
 
 
 def integer_validator(value):
@@ -214,6 +215,34 @@ class UUIDUserPKFieldTestCase(TestCase):
 
     def test_value_conversion(self):
         value = uuid.uuid4()
+        mongo_val = self.field.to_mongo(value)
+        python_val = self.field.to_python(mongo_val)
+        self.assertEqual(value, python_val)
+
+
+class ModelFieldTestCase(TestCase):
+    """
+    Make sure the ModelField can store and retrieve django model instances.
+    """
+    USER_MODEL = get_user_model()
+
+    def setUp(self):
+        self.field = ModelField()
+        self.user = self.USER_MODEL.objects.create_user(username='testuser', email='testuser@example.com',
+                                                        password='test123.')
+
+    def test_user_instance_validate(self):
+        self.assertIsNone(self.field.validate(self.user))
+
+    def test_invalid_value(self):
+        try:
+            self.field.validate(['this', 'is', 'a', 'list'])
+            self.fail('Did not fail when trying to validate a non-valid value.')
+        except ValidationError as e:
+            self.assertEqual(str(e), "Value ['this', 'is', 'a', 'list'] is not a django.db.models.Model instance.")
+
+    def test_value_conversion(self):
+        value = self.user
         mongo_val = self.field.to_mongo(value)
         python_val = self.field.to_python(mongo_val)
         self.assertEqual(value, python_val)
