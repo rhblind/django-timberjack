@@ -5,7 +5,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
-from timberjack.constants import CREATE, UPDATE, DELETE, READ
 from timberjack.documents import LOG_LEVEL, ObjectAccessLog
 
 USER_MODEL = get_user_model()
@@ -14,15 +13,15 @@ USER_MODEL = get_user_model()
 class ModelConstantsTestCase(TestCase):
 
     def test_crud_action_values(self):
-        self.assertEqual(CREATE, 1)
-        self.assertEqual(UPDATE, 2)
-        self.assertEqual(DELETE, 3)
-        self.assertEqual(READ, 4)
+        self.assertEqual(ObjectAccessLog.CREATE_ACTION, 1)
+        self.assertEqual(ObjectAccessLog.UPDATE_ACTION, 2)
+        self.assertEqual(ObjectAccessLog.DELETE_ACTION, 3)
+        self.assertEqual(ObjectAccessLog.READ_ACTION, 4)
 
     def test_crud_action_values_django_compatibility(self):
-        self.assertEqual(CREATE, ADDITION)
-        self.assertEqual(UPDATE, CHANGE)
-        self.assertEqual(DELETE, DELETION)
+        self.assertEqual(ObjectAccessLog.CREATE_ACTION, ADDITION)
+        self.assertEqual(ObjectAccessLog.UPDATE_ACTION, CHANGE)
+        self.assertEqual(ObjectAccessLog.DELETE_ACTION, DELETION)
 
     def test_log_level_values(self):
         log_levels = ['NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']

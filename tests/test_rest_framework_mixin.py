@@ -11,7 +11,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework.serializers import ModelSerializer
 from rest_framework.viewsets import ModelViewSet
 
-from timberjack.documents import ObjectAccessLog, READ, CREATE, UPDATE, DELETE
+from timberjack.documents import ObjectAccessLog
 from timberjack.compat.rest_framework import mixins
 
 
@@ -45,7 +45,7 @@ class AccessLogModelViewMixinTestCase(APITestCase):
         response = self.client.get(reverse('user-detail', kwargs={'pk': self.user.pk}))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        instance = ObjectAccessLog.objects.filter(action_flag=READ).order_by('-timestamp').first()
+        instance = ObjectAccessLog.objects.filter(action_flag=ObjectAccessLog.READ_ACTION).order_by('-timestamp').first()
         self.assertEqual(instance.get_content_object(), self.user)
 
     def test_post_object_is_logged(self):
@@ -56,7 +56,7 @@ class AccessLogModelViewMixinTestCase(APITestCase):
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        instance = ObjectAccessLog.objects.filter(action_flag=CREATE).order_by('-timestamp').first()
+        instance = ObjectAccessLog.objects.filter(action_flag=ObjectAccessLog.CREATE_ACTION).order_by('-timestamp').first()
         self.assertEqual(instance.get_content_object(), User.objects.get(username='another-user'))
 
     def test_patch_object_is_logged(self):
@@ -65,7 +65,7 @@ class AccessLogModelViewMixinTestCase(APITestCase):
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        instance = ObjectAccessLog.objects.filter(action_flag=UPDATE).order_by('-timestamp').first()
+        instance = ObjectAccessLog.objects.filter(action_flag=ObjectAccessLog.UPDATE_ACTION).order_by('-timestamp').first()
         self.assertEqual(instance.get_content_object(), self.user)
 
     def test_put_object_is_logged(self):
@@ -76,7 +76,7 @@ class AccessLogModelViewMixinTestCase(APITestCase):
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        instance = ObjectAccessLog.objects.filter(action_flag=UPDATE).order_by('-timestamp').first()
+        instance = ObjectAccessLog.objects.filter(action_flag=ObjectAccessLog.UPDATE_ACTION).order_by('-timestamp').first()
         self.assertEqual(instance.get_content_object(), self.user)
 
     def test_delete_object_is_logged(self):
@@ -84,7 +84,7 @@ class AccessLogModelViewMixinTestCase(APITestCase):
         response = self.client.delete(reverse('user-detail', kwargs={'pk': user.pk}))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
-        instance = ObjectAccessLog.objects.filter(action_flag=DELETE).order_by('-timestamp').first()
+        instance = ObjectAccessLog.objects.filter(action_flag=ObjectAccessLog.DELETE_ACTION).order_by('-timestamp').first()
         try:
             instance.get_content_object()
             self.fail('Did not fail when trying to get deleted instance')

@@ -3,7 +3,7 @@
 import json
 import logging
 
-from django.contrib.admin.models import LogEntry
+from django.contrib.admin.models import ADDITION, CHANGE, DELETION, LogEntry
 from django.utils import timezone
 from django.utils.encoding import smart_text
 from django.utils.text import get_text_list
@@ -12,7 +12,6 @@ from django.utils.translation import ugettext, ugettext_lazy as _
 from mongoengine import *
 from mongoengine.queryset import QuerySet
 
-from timberjack.constants import CREATE, READ, UPDATE, DELETE
 from timberjack.fields import ContentTypeField, UserPKField
 from timberjack.validators import validate_ip_address
 
@@ -48,12 +47,23 @@ class ObjectAccessLogQuerySet(QuerySet):
 
 class ObjectAccessLog(Document):
 
+    CREATE_ACTION = ADDITION
+    UPDATE_ACTION = CHANGE
+    DELETE_ACTION = DELETION
+    READ_ACTION = 4
+    ACTIONS = (
+        (CREATE_ACTION, _('Created')),
+        (UPDATE_ACTION, _('Updated')),
+        (DELETE_ACTION, _('Deleted')),
+        (READ_ACTION, _('Read'))
+    )
+
     meta = {
         'queryset_class': ObjectAccessLogQuerySet
     }
 
     message = StringField(default='')
-    action_flag = IntField(min_value=1, max_value=4, required=True)
+    action_flag = IntField(min_value=1, max_value=4, choices=ACTIONS, required=True)
     level = IntField(choices=LOG_LEVEL, default=0)
     object_pk = DynamicField(required=True)
     content_type = ContentTypeField(required=True)
@@ -84,19 +94,19 @@ class ObjectAccessLog(Document):
 
     @property
     def is_create_action(self):
-        return self.action_flag == CREATE
+        return self.action_flag == ObjectAccessLog.CREATE_ACTION
 
     @property
     def is_read_action(self):
-        return self.action_flag == READ
+        return self.action_flag == ObjectAccessLog.READ_ACTION
 
     @property
     def is_update_action(self):
-        return self.action_flag == UPDATE
+        return self.action_flag == ObjectAccessLog.UPDATE_ACTION
 
     @property
     def is_delete_action(self):
-        return self.action_flag == DELETE
+        return self.action_flag == ObjectAccessLog.DELETE_ACTION
 
     def get_log_message(self):
         """

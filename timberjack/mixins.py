@@ -4,7 +4,7 @@ from django.apps import apps
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.forms import modelform_factory, ALL_FIELDS
-from timberjack.constants import CREATE, READ, UPDATE, DELETE
+from timberjack.documents import ObjectAccessLog
 
 
 class MethodActionMap(object):
@@ -12,11 +12,11 @@ class MethodActionMap(object):
     Class which maps HTTP methods to user actions.
     """
     action_map = {
-        "GET": READ,
-        "POST": CREATE,
-        "PUT": UPDATE,
-        "PATCH": UPDATE,
-        "DELETE": DELETE,
+        "GET": ObjectAccessLog.READ_ACTION,
+        "POST": ObjectAccessLog.CREATE_ACTION,
+        "PUT": ObjectAccessLog.CREATE_ACTION,
+        "PATCH": ObjectAccessLog.UPDATE_ACTION,
+        "DELETE": ObjectAccessLog.DELETE_ACTION,
     }
 
     def __init__(self, request):
@@ -62,7 +62,7 @@ class BaseObjectAccessLogMixin(object):
             form = ModelForm(request.POST, request.FILES, instance=obj)
         else:
             # NOTE: Do we need to care about this one?
-            if action_flag is CREATE:
+            if action_flag is ObjectAccessLog.CREATE_ACTION:
                 initial = dict(request.GET.items())
                 for key in initial:
                     try:
@@ -76,13 +76,13 @@ class BaseObjectAccessLogMixin(object):
                 form = ModelForm(instance=obj)
 
         message = []
-        if action_flag is CREATE:
+        if action_flag is ObjectAccessLog.CREATE_ACTION:
             message.append({'created': {}})
-        elif action_flag is READ:
+        elif action_flag is ObjectAccessLog.READ_ACTION:
             message.append({'read': {}})
-        elif action_flag is UPDATE:
+        elif action_flag is ObjectAccessLog.UPDATE_ACTION:
             message.append({'updated': {'fields': form.changed_data}})
-        elif action_flag is DELETE:
+        elif action_flag is ObjectAccessLog.DELETE_ACTION:
             message.append({'deleted': {}})
 
         return message
