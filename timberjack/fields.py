@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import re
-import json
 import operator
 from functools import reduce
 
@@ -9,11 +8,13 @@ from django.core import serializers
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.serializers.base import DeserializationError
 from django.db.models import Model
 from django.utils import six
 from django.utils.translation import ugettext_lazy as _
-
 from mongoengine import fields
+
+from timberjack.dereference import DjangoModelDereferenceMixin
 
 _ctype_cache = {}
 
@@ -108,27 +109,39 @@ class UserPKField(fields.DynamicField):
             self.error(message)
 
 
-class ModelField(fields.StringField):
+class ModelField(DjangoModelDereferenceMixin, fields.DictField):
     """
     Store a serialized model instance.
     """
     default_error_messages = {
+        'required': _('Field is required and cannot be empty'),
         'non_model_instance': _('Value %(value)r is not a django.db.models.Model instance.')
     }
 
     def to_python(self, value):
-        if isinstance(value, Model):
-            return value
-        elif isinstance(value, six.text_type):
+        value = super(ModelField, self).to_python(value)
+        if isinstance(value, six.text_type):
             value = '[{value}]'.format(value=value)  # Insert square brackets!
-            deserialized = next(serializers.deserialize('json', value, ignorenonexistent=True), None)
-            return getattr(deserialized, 'object', None)
+            try:
+                deserialized = next(serializers.deserialize('json', value, ignorenonexistent=True), None)
+                value = getattr(deserialized, 'object', None)
+            except DeserializationError:
+                pass
 
-    def to_mongo(self, value, **options):
-        value = serializers.serialize('json', [value], **options)
-        return value[1:-1]  # Trim off square brackets!
+        return value
+
+    def to_mongo(self, value, use_db_field=True, fields=None, **options):
+        if isinstance(value, Model):
+            value = serializers.serialize('json', [value], **options)
+            value = value[1:-1]  # Trim off square brackets!
+        return super(ModelField, self).to_mongo(value, use_db_field, fields)
 
     def validate(self, value):
+        if isinstance(value, dict):
+            return super(ModelField, self).validate(value)
+        if self.required and not value:
+            self.error(self.default_error_messages['required'])
+
         if not isinstance(value, Model):
             message = self.default_error_messages['non_model_instance'] % {
                 'value': value

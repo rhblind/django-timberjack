@@ -61,7 +61,10 @@ class ObjectAccessLog(Document):
     )
 
     meta = {
-        'queryset_class': ObjectAccessLogQuerySet
+        'queryset_class': ObjectAccessLogQuerySet,
+        'indexes': [
+
+        ]
     }
 
     message = StringField(default='')
