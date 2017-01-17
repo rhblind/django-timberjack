@@ -246,9 +246,3 @@ class ModelFieldTestCase(TestCase):
         mongo_val = self.field.to_mongo(value)
         python_val = self.field.to_python(mongo_val)
         self.assertEqual(value, python_val)
-
-
-class ModelFieldDereferenceTestCase(TestCase):
-    """
-    Test dereferencing ModelField.
-    """
