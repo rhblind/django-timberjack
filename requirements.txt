@@ -1,5 +1,5 @@
-Django==1.10.4
-coverage==4.2
+Django==1.10.5
+coverage==4.3.3
 django-mongo-connection==0.0.2
 mongoengine==0.11.0
 nose==1.3.7
