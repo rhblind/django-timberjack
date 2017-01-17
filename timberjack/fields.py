@@ -73,7 +73,6 @@ class UserPKField(fields.DynamicField):
     Dynamic field which piggybacks on the settings.AUTH_USER_MODEL
     validation and value converting.
     """
-
     default_error_messages = {
         'non_field_error': _('Value %(value)r is not a valid primary key value for %(field)r.')
     }

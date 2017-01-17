@@ -31,7 +31,6 @@ class MapBaseDict(BaseDict):
     """
     BaseDict which supports looking up attributes using dot notation.
     """
-
     def __init__(self, dict_items, instance, name):
         super(MapBaseDict, self).__init__(dict_items, instance, name)
 
@@ -60,7 +59,6 @@ class DjangoModelDereferenceMixin(object):
     """
     Mixin class which overrides __get__ behaviour for ModelFields
     """
-
     def __get__(self, instance, owner):
         if instance is None:
             return self

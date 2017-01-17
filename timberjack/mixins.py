@@ -31,7 +31,6 @@ class BaseObjectAccessLogMixin(object):
     """
     Some docstring here..
     """
-
     method_action_map_class = MethodActionMap
 
     def get_method_action_map_class(self):
