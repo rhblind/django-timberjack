@@ -12,7 +12,7 @@ class AccessLogModelViewMixin(BaseObjectAccessLogMixin):
     Mixin class for `ModelViewSet` which writes object access log
     to mongodb.
     """
-    default_log_level = 0
+    default_log_level = 20
     method_action_map_class = MethodActionMap
     write_admin_log = False
 

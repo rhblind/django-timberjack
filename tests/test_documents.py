@@ -44,8 +44,7 @@ class ObjectAccessLogTestCase(TestCase):
 
     def test_document_properties(self):
         instance = ObjectAccessLog(user=self.user, content_type=self.ctype, object_pk=self.user.pk,
-                                   object_repr=repr(self.user), action_flag=1, message='test message',
-                                   level=0)
+                                   object_repr=repr(self.user), action_flag=1, message='test message')
         self.assertTrue(instance.is_create_action)
 
         instance.action_flag = 2
@@ -59,8 +58,7 @@ class ObjectAccessLogTestCase(TestCase):
 
     def test_document_get_log_message(self):
         instance = ObjectAccessLog(user=self.user, content_type=self.ctype, object_pk=self.user.pk,
-                                   object_repr=repr(self.user), action_flag=1, message='test message',
-                                   level=0)
+                                   object_repr=repr(self.user), action_flag=1, message='test message')
         self.assertEqual(instance.get_log_message(), 'test message')
 
         instance.message = ''
@@ -68,8 +66,7 @@ class ObjectAccessLogTestCase(TestCase):
 
     def test_document_write_admin_log(self):
         instance = ObjectAccessLog(user=self.user, content_type=self.ctype, object_pk=self.user.pk,
-                                   object_repr=repr(self.user), action_flag=1, message='test message',
-                                   level=0)
+                                   object_repr=repr(self.user), action_flag=1, message='test message')
         instance.save(write_admin_log=True)
 
         self.assertIsInstance(instance.get_admin_log_object(), LogEntry)
@@ -77,13 +74,12 @@ class ObjectAccessLogTestCase(TestCase):
 
     def test_document_referrer(self):
         instance1 = ObjectAccessLog(user=self.user, content_type=self.ctype, object_pk=self.user.pk,
-                                    object_repr=repr(self.user), action_flag=1, message='message 1',
-                                    level=0)
+                                    object_repr=repr(self.user), action_flag=1, message='message 1')
         instance1.save()
 
         instance2 = ObjectAccessLog(user=self.user, content_type=self.ctype, object_pk=self.user.pk,
                                     object_repr=repr(self.user), action_flag=1, message='message 2',
-                                    level=0, referrer=instance1)
+                                    referrer=instance1)
         instance2.save()
 
         self.assertEqual(instance1, instance2.referrer)

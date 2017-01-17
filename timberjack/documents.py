@@ -4,6 +4,7 @@ import json
 import logging
 
 from django.contrib.admin.models import ADDITION, CHANGE, DELETION, LogEntry
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.utils.encoding import smart_text
 from django.utils.text import get_text_list
@@ -12,7 +13,7 @@ from django.utils.translation import ugettext, ugettext_lazy as _
 from mongoengine import *
 from mongoengine.queryset import QuerySet
 
-from timberjack.fields import ContentTypeField, UserPKField, ModelField
+from timberjack.fields import ContentTypeField, ModelField
 from timberjack.validators import validate_ip_address
 
 LOG_LEVEL = (
@@ -25,12 +26,13 @@ LOG_LEVEL = (
 )
 
 logger = logging.getLogger(__name__)
+USER_MODEL = get_user_model()
 
 
 class ObjectAccessLogQuerySet(QuerySet):
 
     def log_action(self, user, content_type, object_pk, object_repr,
-                   action_flag, message, level=0, ip_address=None, write_admin_log=False):
+                   action_flag, message, level=20, ip_address=None, write_admin_log=False):
         if isinstance(message, list):
             message = json.dumps(message)
         return self._document(
@@ -62,14 +64,11 @@ class ObjectAccessLog(Document):
 
     meta = {
         'queryset_class': ObjectAccessLogQuerySet,
-        'indexes': [
-
-        ]
     }
 
     message = StringField(default='')
     action_flag = IntField(min_value=1, max_value=4, choices=ACTIONS, required=True)
-    level = IntField(choices=LOG_LEVEL, default=0)
+    level = IntField(choices=LOG_LEVEL, default=20)
     object_pk = DynamicField(required=True)
     content_type = ContentTypeField(required=True)
     object_repr = StringField(max_length=200, required=True)
@@ -84,16 +83,16 @@ class ObjectAccessLog(Document):
 
     def __str__(self):
         if self.is_create_action:
-            return ugettext('Added "%(object)s.') % {'object': self.object_repr}
+            return ugettext('Added "%(object)s".') % {'object': self.object_repr}
         elif self.is_update_action:
-            return ugettext('Changed "%(object)s - %(changes)s"') % {
+            return ugettext('Changed "%(object)s - %(changes)s".') % {
                 'object': self.object_repr,
                 'changes': self.get_change_message()
             }
         elif self.is_delete_action:
-            return ugettext('Deleted "%(object)s."') % {'object': self.object_repr}
+            return ugettext('Deleted "%(object)s".') % {'object': self.object_repr}
         elif self.is_read_action:
-            return ugettext('Read "%(object)s."') % {'object': self.object_repr}
+            return ugettext('Read "%(object)s".') % {'object': self.object_repr}
 
         return ugettext('ObjectAccessLog Object')
 
@@ -113,6 +112,34 @@ class ObjectAccessLog(Document):
     def is_delete_action(self):
         return self.action_flag == ObjectAccessLog.DELETE_ACTION
 
+    @property
+    def is_json_message(self):
+        return self.message and self.message[0] == '['
+
+    def _write_log_message(self):
+        """
+        Write a log message to the default named logger.
+        """
+        if self.is_json_message:
+            _log_message = self.get_log_message()
+            parsed_message = _log_message[0].lower() + _log_message[1:]
+        else:
+            parsed_message = str(self)[0].lower() + str(self)[1:].rstrip(".")
+
+        message = 'User "{username}" {str_action} at {timestamp}{ip_addr}.\nContext: {context}'.format(
+            username=getattr(self.user, USER_MODEL.USERNAME_FIELD), str_action=parsed_message,
+            timestamp='{: %B %d, %Y %H:%m:%S}'.format(self.timestamp),
+            ip_addr=' from IP-address %s' % self.ip_address if self.ip_address else '',
+            context=json.dumps({
+                'user_pk': self.user.pk,
+                'object_pk': self.object_pk,
+                'timestamp': str(self.timestamp),
+                'ip_address': self.ip_address,
+                'referrer': str(self.referrer.pk) if self.referrer else None
+            })
+        )
+        logger.log(self.level, msg=message)
+
     def get_log_message(self):
         """
         (Copied from `django.contrib.admin.models.LogEntry.get_change_message()`)
@@ -120,7 +147,7 @@ class ObjectAccessLog(Document):
         If self.change_message is a JSON structure, interpret it as a change
         string, properly translated.
         """
-        if self.message and self.message[0] == '[':
+        if self.is_json_message:
             try:
                 message = json.loads(self.message)
             except ValueError:
@@ -178,6 +205,7 @@ class ObjectAccessLog(Document):
         return self.content_type.get_object_for_this_type(pk=self.object_pk)
 
     def save(self, *args, **kwargs):
+        self._write_log_message()
         if kwargs.get('write_admin_log', False) is True:
             if self.is_read_action:
                 logger.debug('Read actions are not written to the `admin.LogEntry` table due '
