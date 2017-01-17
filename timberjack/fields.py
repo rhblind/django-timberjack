@@ -139,6 +139,7 @@ class ModelField(DjangoModelDereferenceMixin, fields.DictField):
     def validate(self, value):
         if isinstance(value, dict):
             return super(ModelField, self).validate(value)
+
         if self.required and not value:
             self.error(self.default_error_messages['required'])
 

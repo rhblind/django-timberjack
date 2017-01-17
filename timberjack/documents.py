@@ -24,7 +24,7 @@ LOG_LEVEL = (
     (50, _('CRITICAL'))
 )
 
-logger = logging.getLogger('timberjack')
+logger = logging.getLogger(__name__)
 
 
 class ObjectAccessLogQuerySet(QuerySet):

@@ -33,34 +33,38 @@ class AccessLogModelViewMixin(BaseObjectAccessLogMixin):
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        self.log_object_action(self.request, instance,
-                               message=[{'read': {
-                                   'name': force_text(instance._meta.verbose_name),
-                                   'object': force_text(instance)
-                               }}])
+        if self.request.user.is_authenticated():
+            self.log_object_action(self.request, instance,
+                                   message=[{'read': {
+                                       'name': force_text(instance._meta.verbose_name),
+                                       'object': force_text(instance)
+                                   }}])
         return super(AccessLogModelViewMixin, self).retrieve(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         super(AccessLogModelViewMixin, self).perform_create(serializer)
-        self.log_object_action(self.request, serializer.instance,
-                               message=[{'added': {
-                                   'name': force_text(serializer.instance._meta.verbose_name),
-                                   'object': force_text(serializer.instance)
-                               }}])
+        if self.request.user.is_authenticated():
+            self.log_object_action(self.request, serializer.instance,
+                                   message=[{'added': {
+                                       'name': force_text(serializer.instance._meta.verbose_name),
+                                       'object': force_text(serializer.instance)
+                                   }}])
 
     def perform_update(self, serializer):
         super(AccessLogModelViewMixin, self).perform_update(serializer)
-        self.log_object_action(self.request, serializer.instance,
-                               message=[{'changed': {
-                                   'name': force_text(serializer.instance._meta.verbose_name),
-                                   'object': force_text(serializer.instance),
-                                   'fields': list(serializer.validated_data.keys())
-                               }}])
+        if self.request.user.is_authenticated():
+            self.log_object_action(self.request, serializer.instance,
+                                   message=[{'changed': {
+                                       'name': force_text(serializer.instance._meta.verbose_name),
+                                       'object': force_text(serializer.instance),
+                                       'fields': list(serializer.validated_data.keys())
+                                   }}])
 
     def perform_destroy(self, instance):
-        self.log_object_action(self.request, instance,
-                               message=[{'deleted': {
-                                   'name': force_text(instance._meta.verbose_name),
-                                   'object': force_text(instance)
-                               }}])
+        if self.request.user.is_authenticated():
+            self.log_object_action(self.request, instance,
+                                   message=[{'deleted': {
+                                       'name': force_text(instance._meta.verbose_name),
+                                       'object': force_text(instance)
+                                   }}])
         super(AccessLogModelViewMixin, self).perform_destroy(instance)

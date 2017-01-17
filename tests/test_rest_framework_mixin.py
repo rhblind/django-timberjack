@@ -30,7 +30,8 @@ class UserViewSet(mixins.AccessLogModelViewMixin, ModelViewSet):
 router = DefaultRouter()
 router.register(r'users', viewset=UserViewSet)
 urlpatterns = [
-    url(r'^', include(router.urls))
+    url(r'^', include(router.urls)),
+    url(r'^auth/', include('rest_framework.urls', namespace='rest_framework'))
 ]
 
 
@@ -39,16 +40,20 @@ class AccessLogModelViewMixinTestCase(APITestCase):
 
     def setUp(self):
         self.user = User.objects.create_user('testuser', 'testuser@example.com', 'test123.')
-        self.client.login(username=self.user.username, password='test123.')
+        self.client.force_authenticate(user=self.user)
 
     def test_get_object_is_logged(self):
+        ObjectAccessLog.drop_collection()
+
         response = self.client.get(reverse('user-detail', kwargs={'pk': self.user.pk}))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        instance = ObjectAccessLog.objects.filter(action_flag=ObjectAccessLog.READ_ACTION).order_by('-timestamp').first()
+        instance = ObjectAccessLog.objects.filter(action_flag=ObjectAccessLog.READ_ACTION).first()
         self.assertEqual(instance.get_content_object(), self.user)
 
     def test_post_object_is_logged(self):
+        ObjectAccessLog.drop_collection()
+
         response = self.client.post(reverse('user-list'), data={
             'username': 'another-user',
             'email': 'another-user@example.com',
@@ -56,19 +61,23 @@ class AccessLogModelViewMixinTestCase(APITestCase):
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        instance = ObjectAccessLog.objects.filter(action_flag=ObjectAccessLog.CREATE_ACTION).order_by('-timestamp').first()
+        instance = ObjectAccessLog.objects.filter(action_flag=ObjectAccessLog.CREATE_ACTION).first()
         self.assertEqual(instance.get_content_object(), User.objects.get(username='another-user'))
 
     def test_patch_object_is_logged(self):
+        ObjectAccessLog.drop_collection()
+
         response = self.client.patch(reverse('user-detail', kwargs={'pk': self.user.pk}), data={
             'username': 'changed-user'
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        instance = ObjectAccessLog.objects.filter(action_flag=ObjectAccessLog.UPDATE_ACTION).order_by('-timestamp').first()
+        instance = ObjectAccessLog.objects.filter(action_flag=ObjectAccessLog.UPDATE_ACTION).first()
         self.assertEqual(instance.get_content_object(), self.user)
 
     def test_put_object_is_logged(self):
+        ObjectAccessLog.drop_collection()
+
         response = self.client.put(reverse('user-detail', kwargs={'pk': self.user.pk}), data={
             'username': 'changed-user',
             'email': 'changed-user@example.com',
@@ -76,15 +85,17 @@ class AccessLogModelViewMixinTestCase(APITestCase):
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        instance = ObjectAccessLog.objects.filter(action_flag=ObjectAccessLog.UPDATE_ACTION).order_by('-timestamp').first()
+        instance = ObjectAccessLog.objects.filter(action_flag=ObjectAccessLog.UPDATE_ACTION).first()
         self.assertEqual(instance.get_content_object(), self.user)
 
     def test_delete_object_is_logged(self):
+        ObjectAccessLog.drop_collection()
+
         user = User.objects.create_user('delete-me', 'delete-me@example.com', 'test123.')
         response = self.client.delete(reverse('user-detail', kwargs={'pk': user.pk}))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
-        instance = ObjectAccessLog.objects.filter(action_flag=ObjectAccessLog.DELETE_ACTION).order_by('-timestamp').first()
+        instance = ObjectAccessLog.objects.filter(action_flag=ObjectAccessLog.DELETE_ACTION).first()
         try:
             instance.get_content_object()
             self.fail('Did not fail when trying to get deleted instance')

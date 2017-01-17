@@ -14,7 +14,7 @@ class MethodActionMap(object):
     action_map = {
         "GET": ObjectAccessLog.READ_ACTION,
         "POST": ObjectAccessLog.CREATE_ACTION,
-        "PUT": ObjectAccessLog.CREATE_ACTION,
+        "PUT": ObjectAccessLog.UPDATE_ACTION,
         "PATCH": ObjectAccessLog.UPDATE_ACTION,
         "DELETE": ObjectAccessLog.DELETE_ACTION,
     }
