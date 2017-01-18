@@ -15,7 +15,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'mongo_connection',
-    'timberjack'
+    'timberjack',
+
+    'tests.testapp'
 ]
 
 MIDDLEWARE = [
@@ -77,6 +79,30 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '%(levelname)s %(asctime)s %(module)s '
+                      '%(process)d %(thread)d %(message)s'
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose'
+        },
+    },
+    'loggers': {
+        'timberjack': {
+            'level': 'DEBUG',
+            'handlers': ['console'],
+            'propagate': True
+        }
+    }
+}
 try:
     from .local_settings import *
 except ImportError:
