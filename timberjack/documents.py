@@ -6,7 +6,7 @@ import logging
 from django.contrib.admin.models import ADDITION, CHANGE, DELETION, LogEntry
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from django.utils.encoding import smart_text
+from django.utils.encoding import smart_text, force_text
 from django.utils.text import get_text_list
 from django.utils.translation import ugettext, ugettext_lazy as _
 
@@ -32,7 +32,7 @@ USER_MODEL = get_user_model()
 class ObjectAccessLogQuerySet(QuerySet):
 
     def log_action(self, user, content_type, object_pk, object_repr,
-                   action_flag, message, level=20, ip_address=None, write_admin_log=False):
+                   action_flag, message='', log_level=20, ip_address=None, write_admin_log=False):
         if isinstance(message, list):
             message = json.dumps(message)
         return self._document(
@@ -42,7 +42,7 @@ class ObjectAccessLogQuerySet(QuerySet):
             object_repr=object_repr[:200],
             action_flag=action_flag,
             message=message,
-            level=level,
+            level=log_level,
             ip_address=ip_address
         ).save(write_admin_log=write_admin_log)
 
@@ -87,7 +87,7 @@ class ObjectAccessLog(Document):
         elif self.is_update_action:
             return ugettext('Changed "%(object)s - %(changes)s".') % {
                 'object': self.object_repr,
-                'changes': self.get_change_message()
+                'changes': self.get_log_message()
             }
         elif self.is_delete_action:
             return ugettext('Deleted "%(object)s".') % {'object': self.object_repr}
@@ -124,18 +124,22 @@ class ObjectAccessLog(Document):
             _log_message = self.get_log_message()
             parsed_message = _log_message[0].lower() + _log_message[1:]
         else:
-            parsed_message = str(self)[0].lower() + str(self)[1:].rstrip(".")
+            parsed_message = str(self)[0].lower() + str(self)[1:]
 
-        message = 'User "{username}" {str_action} at {timestamp}{ip_addr}.\nContext: {context}'.format(
-            username=getattr(self.user, USER_MODEL.USERNAME_FIELD), str_action=parsed_message,
-            timestamp='{: %B %d, %Y %H:%m:%S}'.format(self.timestamp),
+        message = 'User "{username}" {str_action} at {timestamp}{ip_addr}.\n|{context}|'.format(
+            username=getattr(self.user, USER_MODEL.USERNAME_FIELD), str_action=parsed_message.rstrip('.'),
+            timestamp='{:%B %d, %Y %H:%m:%S}'.format(self.timestamp),
             ip_addr=' from IP-address %s' % self.ip_address if self.ip_address else '',
             context=json.dumps({
+                'pk': str(self.pk),
+                'action_flag': self.action_flag,
+                'content_type': '{app_label}.{model}'.format(app_label=self.content_type.app_label,
+                                                             model=self.content_type.model),
                 'user_pk': self.user.pk,
                 'object_pk': self.object_pk,
                 'timestamp': str(self.timestamp),
                 'ip_address': self.ip_address,
-                'referrer': str(self.referrer.pk) if self.referrer else None
+                'referrer': str(self.referrer.pk) if self.referrer else None,
             })
         )
         logger.log(self.level, msg=message)
@@ -210,13 +214,12 @@ class ObjectAccessLog(Document):
             if self.is_read_action:
                 logger.debug('Read actions are not written to the `admin.LogEntry` table due '
                              'to missing support for read actions.')
-            elif not self.user:
-                logger.debug('Action cannot be written to the `admin.LogEntry` table due '
-                             'to missing `user` value.')
             else:
                 self.admin_log_pk = LogEntry.objects.create(user_id=self.user.pk, content_type_id=self.content_type.pk,
                                                             object_id=self.object_pk,
-                                                            object_repr=repr(self.content_type.get_object_for_this_type(
-                                                                pk=self.object_pk))[:200], action_flag=self.action_flag,
+                                                            object_repr=force_text(
+                                                                self.content_type.get_object_for_this_type(
+                                                                    pk=self.object_pk))[:200],
+                                                            action_flag=self.action_flag,
                                                             change_message=self.message).pk
         return super(ObjectAccessLog, self).save(*args, **kwargs)
