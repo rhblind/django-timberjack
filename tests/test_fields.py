@@ -7,8 +7,9 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.test import TestCase, override_settings
+from django.utils import timezone
 
-from mongoengine import ValidationError
+from mongoengine import *
 from timberjack.fields import ContentType, ContentTypeField, UserPKField, ModelField
 
 
@@ -29,7 +30,6 @@ def uuid_validator(value):
 
 
 class ContentTypeFieldTestCase(TestCase):
-
     def setUp(self):
         self.field = ContentTypeField()
 
@@ -57,7 +57,7 @@ class ContentTypeFieldTestCase(TestCase):
     def test_validate_ctype_instance(self):
         ctype = ContentType.objects.get(app_label='auth', model='user')
         self.assertIsNone(self.field.validate(ctype))
-        
+
     def test_validate_invalid_ctype_string(self):
         try:
             self.field.validate('invalid')
@@ -93,6 +93,7 @@ class NoPKFieldUserTestCase(TestCase):
     """
     Test that a user model with no defined primary key works.
     """
+
     class NoPKFieldUserModel(AbstractBaseUser):
         username = models.CharField(max_length=255)
         USERNAME_FIELD = 'username'
@@ -115,6 +116,7 @@ class IntegerUserPKFieldTestCase(TestCase):
     """
     Test that a user model with a custom integer based primary key works.
     """
+
     class IntegerUserModel(AbstractBaseUser):
         id = models.IntegerField(primary_key=True, unique=True, validators=[integer_validator])
         username = models.CharField(max_length=255)
@@ -148,6 +150,7 @@ class StringUserPKFieldTestCase(TestCase):
     """
     Test that a user model with a custom string based primary key works.
     """
+
     class StringUserModel(AbstractBaseUser):
         id = models.CharField(primary_key=True, unique=True, max_length=6)
         username = models.CharField(max_length=255)
@@ -189,6 +192,7 @@ class UUIDUserPKFieldTestCase(TestCase):
     """
     Test that a user model with a custom UUID based primary key works.
     """
+
     class UUIDUserModel(AbstractBaseUser):
         id = models.UUIDField(primary_key=True, unique=True, validators=[uuid_validator])
         username = models.CharField(max_length=255)
@@ -246,3 +250,38 @@ class ModelFieldTestCase(TestCase):
         mongo_val = self.field.to_mongo(value)
         python_val = self.field.to_python(mongo_val)
         self.assertEqual(value, python_val)
+
+    def test_model_field_instance(self):
+
+        class UserDocument(Document):
+            user = ModelField()
+
+        UserDocument.drop_collection()
+
+        instance = UserDocument(user=self.user)
+        instance.save()
+
+        self.assertIsInstance(instance.user, self.USER_MODEL)
+
+    def test_model_field_filter(self):
+
+        class UserDocument(Document):
+            user = ModelField()
+            timestamp = DateTimeField(required=True, default=timezone.now)
+
+        UserDocument.drop_collection()
+
+        for i in range(1, 10):
+            defaults = {
+                'username': 'user%d' % i,
+                'email': 'user%d@example.com' % i,
+                'password': 'test123.'
+            }
+            user = self.USER_MODEL.objects.create_user(**defaults)
+            UserDocument.objects.create(user=user)
+
+        self.assertEqual(UserDocument.objects.get(user__fields__username='user1').user,
+                         self.USER_MODEL.objects.get(username='user1'))
+
+        self.assertEqual(UserDocument.objects.get(user__pk=2).user,
+                         self.USER_MODEL.objects.get(pk=2))

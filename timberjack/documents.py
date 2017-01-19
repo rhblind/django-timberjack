@@ -42,7 +42,7 @@ class ObjectAccessLogQuerySet(QuerySet):
             object_repr=object_repr[:200],
             action_flag=action_flag,
             message=message,
-            level=log_level,
+            log_level=log_level,
             ip_address=ip_address
         ).save(write_admin_log=write_admin_log)
 
@@ -68,7 +68,7 @@ class ObjectAccessLog(Document):
 
     message = StringField(default='')
     action_flag = IntField(min_value=1, max_value=4, choices=ACTIONS, required=True)
-    level = IntField(choices=LOG_LEVEL, default=20)
+    log_level = IntField(choices=LOG_LEVEL, default=20)
     object_pk = DynamicField(required=True)
     content_type = ContentTypeField(required=True)
     object_repr = StringField(max_length=200, required=True)
@@ -116,9 +116,12 @@ class ObjectAccessLog(Document):
     def is_json_message(self):
         return self.message and self.message[0] == '['
 
-    def _write_log_message(self):
+    def get_human_message(self, include_context=False):
         """
-        Write a log message to the default named logger.
+        Get a human readable log message.
+        :param include_context: Whether to include a machine readable context. If included,
+                                the context will be separated from the string message by a
+                                new line character(\n).
         """
         if self.is_json_message:
             _log_message = self.get_log_message()
@@ -126,30 +129,30 @@ class ObjectAccessLog(Document):
         else:
             parsed_message = str(self)[0].lower() + str(self)[1:]
 
-        message = 'User "{username}" {str_action} at {timestamp}{ip_addr}.\n|{context}|'.format(
+        message = 'User "{username}" {str_action} at {timestamp}{ip_addr}.'.format(
             username=getattr(self.user, USER_MODEL.USERNAME_FIELD), str_action=parsed_message.rstrip('.'),
             timestamp='{:%B %d, %Y %H:%m:%S}'.format(self.timestamp),
-            ip_addr=' from IP-address %s' % self.ip_address if self.ip_address else '',
-            context=json.dumps({
-                'pk': str(self.pk),
-                'action_flag': self.action_flag,
-                'content_type': '{app_label}.{model}'.format(app_label=self.content_type.app_label,
-                                                             model=self.content_type.model),
-                'user_pk': self.user.pk,
-                'object_pk': self.object_pk,
-                'timestamp': str(self.timestamp),
-                'ip_address': self.ip_address,
-                'referrer': str(self.referrer.pk) if self.referrer else None,
-            })
-        )
-        logger.log(self.level, msg=message)
+            ip_addr=' from IP-address %s' % self.ip_address if self.ip_address else '')
+        if include_context:
+            message = '{message}\n{context}'.format(
+                message=message,
+                context=json.dumps({
+                    'pk': str(self.pk),
+                    'action_flag': self.action_flag,
+                    'content_type': '{app_label}.{model}'.format(app_label=self.content_type.app_label,
+                                                                 model=self.content_type.model),
+                    'user_pk': self.user.pk,
+                    'object_pk': self.object_pk,
+                    'timestamp': str(self.timestamp),
+                    'ip_address': self.ip_address,
+                    'referrer': str(self.referrer.pk) if self.referrer else None,
+                }))
+        return message
 
     def get_log_message(self):
         """
         (Copied from `django.contrib.admin.models.LogEntry.get_change_message()`)
-
-        If self.change_message is a JSON structure, interpret it as a change
-        string, properly translated.
+        If self.message is a JSON structure, interpret it as a change string, properly translated.
         """
         if self.is_json_message:
             try:
@@ -209,7 +212,7 @@ class ObjectAccessLog(Document):
         return self.content_type.get_object_for_this_type(pk=self.object_pk)
 
     def save(self, *args, **kwargs):
-        self._write_log_message()
+        logger.log(self.log_level, msg=self.get_human_message(include_context=True))
         if kwargs.get('write_admin_log', False) is True:
             if self.is_read_action:
                 logger.debug('Read actions are not written to the `admin.LogEntry` table due '

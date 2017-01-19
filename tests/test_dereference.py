@@ -2,6 +2,7 @@
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 
 from mongoengine import *
 from mongoengine.context_managers import query_counter
@@ -23,6 +24,7 @@ class ModelFieldDereferenceTestCase(TestCase):
 
         class TestDocument(Document):
             user = ModelField()
+            timestamp = DateTimeField(required=True, default=timezone.now)
 
         TestDocument.drop_collection()
 
@@ -32,13 +34,14 @@ class ModelFieldDereferenceTestCase(TestCase):
         with query_counter() as count:
             self.assertEqual(count, 0)
 
-            instance = TestDocument.objects.first()
+            instance = TestDocument.objects.order_by('-timestamp').first()
             self.assertEqual(count, 1)
 
     def test_model_instance_attribute_lookup(self):
 
         class TestDocument(Document):
             user = ModelField()
+            timestamp = DateTimeField(required=True, default=timezone.now)
 
         TestDocument.drop_collection()
 

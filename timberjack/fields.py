@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import re
+import json
 import operator
 from functools import reduce
 
@@ -119,20 +120,19 @@ class ModelField(DjangoModelDereferenceMixin, fields.DictField):
 
     def to_python(self, value):
         value = super(ModelField, self).to_python(value)
-        if isinstance(value, six.text_type):
-            value = '[{value}]'.format(value=value)  # Insert square brackets!
+        if isinstance(value, dict) and all(key in value for key in ('fields', 'model', 'pk')):
             try:
-                deserialized = next(serializers.deserialize('json', value, ignorenonexistent=True), None)
+                deserialized = next(serializers.deserialize('json', '[{value}]'.format(value=json.dumps(value)),
+                                                            ignorenonexistent=True), None)
                 value = getattr(deserialized, 'object', None)
             except DeserializationError:
                 pass
-
         return value
 
     def to_mongo(self, value, use_db_field=True, fields=None, **options):
         if isinstance(value, Model):
             value = serializers.serialize('json', [value], **options)
-            value = value[1:-1]  # Trim off square brackets!
+            value = json.loads(value[1:-1])  # Trim off square brackets!
         return super(ModelField, self).to_mongo(value, use_db_field, fields)
 
     def validate(self, value):

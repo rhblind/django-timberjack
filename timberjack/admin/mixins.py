@@ -121,6 +121,8 @@ class TimberjackMixin(admin.ModelAdmin):
             raise PermissionDenied
 
         action_list = ObjectAccessLog.objects.order_by('-timestamp').filter(object_pk=instance.pk)
+        for obj in action_list:
+            pass
 
         context = dict(
             self.admin_site.each_context(request),
