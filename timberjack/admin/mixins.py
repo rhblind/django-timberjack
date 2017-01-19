@@ -19,6 +19,7 @@ class TimberjackMixin(admin.ModelAdmin):
 
     default_log_level = 20
     change_form_template = 'admin/timberjack/change_form.html'
+    timberjack_max_history_items = 100
     timberjack_history_template = 'admin/timberjack/object_history.html'
 
     def _get_request_address(self, request):
@@ -125,7 +126,7 @@ class TimberjackMixin(admin.ModelAdmin):
             object_pk=instance.pk,
             content_type__fields__model=ctype.model,
             content_type__fields__app_label=ctype.app_label
-        ).order_by('-timestamp')
+        ).order_by('-timestamp')[:self.timberjack_max_history_items]  # TODO: Create a proper pagination for results!
 
         context = dict(
             self.admin_site.each_context(request),
