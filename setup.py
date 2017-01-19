@@ -34,7 +34,7 @@ setup(
     include_package_data=True,
     install_requires=[
         'Django>=1.8.0',
-        'mongoengine>=0.10.6',
+        'mongoengine>=0.11.0',
         'django-mongo-connection>=0.0.2'
     ],
     tests_require=[
