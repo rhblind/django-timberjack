@@ -120,9 +120,12 @@ class TimberjackMixin(admin.ModelAdmin):
         if not self.has_change_permission(request, instance):
             raise PermissionDenied
 
-        action_list = ObjectAccessLog.objects.order_by('-timestamp').filter(object_pk=instance.pk)
-        for obj in action_list:
-            pass
+        ctype = get_content_type_for_model(model)
+        action_list = ObjectAccessLog.objects.filter(
+            object_pk=instance.pk,
+            content_type__fields__model=ctype.model,
+            content_type__fields__app_label=ctype.app_label
+        ).order_by('-timestamp')
 
         context = dict(
             self.admin_site.each_context(request),
