@@ -70,7 +70,7 @@ class ObjectAccessLog(Document):
     action_flag = IntField(min_value=1, max_value=4, choices=ACTIONS, required=True)
     log_level = IntField(choices=LOG_LEVEL, default=20)
     object_pk = DynamicField(required=True)
-    content_type = ContentTypeField(required=True)
+    content_type = ModelField(required=True)
     object_repr = StringField(max_length=200, required=True)
     user = ModelField(required=True)
     ip_address = StringField(validation=validate_ip_address)
