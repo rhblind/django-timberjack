@@ -3,3 +3,4 @@ include LICENSE.txt
 include requirements.txt
 include tox.ini
 recursive-include tests *.py *.json *.txt
+recursive-include timberjack *.py *.js *.html *.css
