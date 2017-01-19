@@ -130,7 +130,9 @@ class ObjectAccessLog(Document):
             parsed_message = str(self)[0].lower() + str(self)[1:]
 
         message = 'User "{username}" {str_action} at {timestamp}{ip_addr}.'.format(
-            username=getattr(self.user, USER_MODEL.USERNAME_FIELD), str_action=parsed_message.rstrip('.'),
+            username=''.join((self.user.get_username(), ' ({fullname})'.format(fullname=self.user.get_full_name())
+                              if self.user.get_full_name() else '')),
+            str_action=parsed_message.rstrip('.'),
             timestamp='{:%B %d, %Y %H:%m:%S}'.format(self.timestamp),
             ip_addr=' from IP-address %s' % self.ip_address if self.ip_address else '')
         if include_context:
