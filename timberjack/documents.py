@@ -13,7 +13,7 @@ from django.utils.translation import ugettext, ugettext_lazy as _
 from mongoengine import *
 from mongoengine.queryset import QuerySet
 
-from timberjack.fields import ContentTypeField, ModelField
+from timberjack.fields import ModelField
 from timberjack.validators import validate_ip_address
 
 LOG_LEVEL = (
