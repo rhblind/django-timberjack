@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from django.conf.urls import url
-from django.contrib import admin
 from django.contrib.admin.options import get_content_type_for_model
 from django.contrib.admin.utils import unquote
 from django.core.exceptions import PermissionDenied
@@ -15,7 +14,7 @@ from django.utils.translation import ugettext_lazy as _
 from timberjack.documents import ObjectAccessLog
 
 
-class TimberjackMixin(admin.ModelAdmin):
+class TimberjackMixin(object):
 
     default_log_level = 20
     change_form_template = 'admin/timberjack/change_form.html'
