@@ -121,9 +121,12 @@ class ObjectAccessLog(Document):
     def is_json_message(self):
         return self.message and self.message[0] == '['
 
-    def get_human_message(self, include_context=False):
+    def get_human_message(self, include_fullname=False, include_context=False):
         """
         Get a human readable log message.
+        :param include_fullname: Default to False. Set to True to include users full name
+                                 in log message. Might cause UnicodeDecodeErrors for some 3rd
+                                 party libraries, or leaking sensitive information.
         :param include_context: Whether to include a machine readable context. If included,
                                 the context will be separated from the string message by a
                                 new line character(\n).
@@ -136,7 +139,7 @@ class ObjectAccessLog(Document):
 
         message = 'User "{username}" {str_action} at {timestamp}{ip_addr}.'.format(
             username=''.join((self.user.get_username(), ' ({fullname})'.format(fullname=self.user.get_full_name())
-                              if self.user.get_full_name() else '')),
+                              if include_fullname and self.user.get_full_name() else '')),
             str_action=parsed_message.rstrip('.'),
             timestamp='{:%B %d, %Y %H:%M:%S}'.format(self.timestamp),
             ip_addr=' from IP-address %s' % self.ip_address if self.ip_address else '')
