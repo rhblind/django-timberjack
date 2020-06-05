@@ -1,4 +1,4 @@
-Django==1.10.5
+Django==1.11.29
 coverage==4.3.3
 django-mongo-connection==0.0.2
 mongoengine==0.11.0
